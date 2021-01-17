@@ -129,24 +129,23 @@ def makeplot(num_neg, types):
                 # plt.plot(get_score(f"{homedir}/pig/{task_results}", fl_len=True),
                 #         get_score(f"{homedir}/pig/{task_results}"), 'o', label=f"{task_results[13:]}")
 
-    folders.sort(key=lambda x: (float(x.split("_")[3]), x.split("_")[4], x.split("_")[2]))
+    folders.sort(key=lambda x: (float(x.split("_")[3]), x.split("_")[4], x.split("_")[-1], x.split("_")[2]))
     plot_dataX = []
     plot_dataY = []
     for i in range(len(folders)):
         if i != 0:
-            if folders[i].split("_")[3] != folders[i-1].split("_")[3] or folders[i].split("_")[4] != folders[i-1].split("_")[4]:
-                plt.plot(plot_dataX[0], plot_dataY[0], 'o')
-                try:
-                    plt.plot(plot_dataX[1], plot_dataY[1], 'o')
-                except:
-                    print("Only one datapoint exists")
+            if folders[i][19:] != folders[i-1][19:]:
+                # Plot the first i-1 plot points
+                for j in range(len(plot_dataX) - 1):
+                    plt.plot(plot_dataX[j], plot_dataY[j], 'o')
                 plt.plot(plot_dataX, plot_dataY, label=folders[i-1][folders[i-1].index(folders[i-1].split("_")[3]):])
                 plot_dataX = []
                 plot_dataY = []
         plot_dataX.append(get_score(f"{homedir}/pig/{folders[i]}", fl_len=True))
         plot_dataY.append(get_score(f"{homedir}/pig/{folders[i]}"))
+    for j in range(len(plot_dataX) - 1):
+        plt.plot(plot_dataX[j], plot_dataY[j], 'o')
     plt.plot(plot_dataX, plot_dataY, label=folders[-1][folders[-1].index(folders[-1].split("_")[3]):])
-    plt.plot(plot_dataX[0], plot_dataY[0], 'o')
     """for i in num_neg:
         for j in num_randf:
             if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_random"):

@@ -262,7 +262,7 @@ def make_runall(dr):
                     line = line.strip()
                     line += " -dr " + dr
             new_text += line
-    with open("runall_tasks_sge_pca.sh", "w") as f:
+    with open("runall_tasks_sge.sh", "w") as f:
         f.write(new_text)
 
 
