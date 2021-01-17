@@ -83,7 +83,7 @@ gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
      'min_samples_leaf': [1],
      'min_samples_split': [2],
      'min_weight_fraction_leaf': [0.0],
-     'n_estimators':  list(range(20,300)),
+     'n_estimators':  list(range(100, 300)),
      'n_iter_no_change': [None],
      'random_state': [None],
      'subsample': [1.0],

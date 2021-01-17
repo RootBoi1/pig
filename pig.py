@@ -8,11 +8,12 @@ import input.loadfiles as loadfiles
 import optimization.feature_selection as fs
 import optimization.estimator_parameter as rps
 import data.blacklist as blacklist
+import dimension_reduction.dimension_reduction as dim_r
 from sklearn.preprocessing import StandardScaler
 from collections import defaultdict
 
 # Location for temporary files. Remember to clean the old location before changing.
-tmpdirectory = "/scratch/bi01/mautner/guest10/tmp"
+tmpdirectory = "/scratch/bi01/guest02/tmp"
 
 
 # tmpdirectory = "tmp"
@@ -23,9 +24,9 @@ def cleanup(keep_pn=True, keep_featurelists=False):
     """
     import shutil
     for folder in ["pig_o", "pig_e"]:
-        if os.path.exists(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}"):
-            for file in os.listdir(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}"):
-                os.remove(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}/{file}")
+        if os.path.exists(f"/scratch/bi01/guest02/pig/logs/{folder}"):
+            for file in os.listdir(f"/scratch/bi01/guest02/pig/logs/{folder}"):
+                os.remove(f"/scratch/bi01/guest02/pig/logs/{folder}/{file}")
             print(f"Cleaned up {folder}")
     if os.path.exists(f"{tmpdirectory}"):
         ##        if keep_featurelists:
@@ -186,7 +187,7 @@ def make_set_fl_tasks(p, n, set_fl, clfnames, n_folds, randseed):
     return len(set_fl_tasks)
 
 
-def calculate(idd, n_jobs, debug):
+def calculate(idd, n_jobs, debug, dr=""):
     """Executes FS and RPS for a given task. Executed by cluster.
 
     Args:
@@ -209,8 +210,13 @@ def calculate(idd, n_jobs, debug):
         fname = "Set Featurelist"
     else:
         raise ValueError("Incorrect number of arguments in the taskfile: {len(task)} should be 5 or 3")
-    scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
-                                                                 debug)  ######
+    if dr:
+        foldxy, model = dim_r.dimension_reduction(foldxy, mask, dr, randseed)
+        scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
+                                                                     debug, model)  ######
+    else:
+        scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
+                                                                     debug)  ######
     best_esti_params = best_esti.get_params()
     best_esti = (type(best_esti).__name__, best_esti_params)  # Creates readable tuple that can be dumped.
     b.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"{tmpdirectory}/task_results/{idd}.json")
@@ -236,8 +242,32 @@ def getresults():
 #############
 
 
+def make_runall(dr):
+    print("Adjusting script")
+    new_text = ""
+    with open("runall_tasks_sge.sh", "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            if line == lines[-1]:
+                if "-dr" in line:
+                    line = line.strip()
+                    args = line.split(" ")
+                    if dr:
+                        line = line.replace(args[-1], dr)
+                    else:
+                        line = line.replace(args[-1], "")
+                        line = line.replace("-dr", "")
+                        line = line.strip()
+                elif dr and "-dr" not in line:
+                    line = line.strip()
+                    line += " -dr " + dr
+            new_text += line
+    with open("runall_tasks_sge_pca.sh", "w") as f:
+        f.write(new_text)
+
+
 def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug, keep_featurelists,
-            set_fl=[]):
+            set_fl=[], dr=""):
     """
     Note: keep_featurelists is no longer working after code has been restructured - TODO.
     """
@@ -245,6 +275,8 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
     starttime = time()
     if keep_featurelists and set_fl:
         raise ValueError("Using --keepfl and --featurelist at once will lead to errors and is not allowed")
+    # Adjusting --calc call
+    make_runall(dr)
     # Load files
     print("Loading p and n files")
     p, n = load_pn_files(use_rnaz, use_filters, numneg, randseed, debug)
@@ -276,7 +308,6 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
     b.shexec(f"python pig.py --results fel > results/output_results.txt")
     res.showresults("rp", "results/results.json", showplots=False)
     print(f"{time() - starttime}: Done")
-
 
 #############
 # Main Function
@@ -324,6 +355,8 @@ if __name__ == "__main__":
     parser.add_argument('--numneg', type=int, default=10000,
                         help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
+    parser.add_argument('-dr', '--dimension_reduction', nargs=1, type=str, default=[],
+                        help='Performes dimensionality reduction with given method')
     parser.add_argument('--results', type=str, default="",
                         help='If used ignore all other arguments and show selected results (options: hfelrp)')
     parser.add_argument('--keepfl', action='store_true',
@@ -349,6 +382,10 @@ if __name__ == "__main__":
     randseed = args['seed']
     numneg = args['numneg']  # Number of negative files beeing read by b.loaddata()
     n_jobs = 24  # Number of parallel jobs used by RandomizedSearchCV
+    try:
+        dr = args['dimension_reduction'][0]
+    except:
+        dr = ""
     if args['featurelist']:
         set_fl = args['featurelist'][0].strip("'[]").split("', '")
     else:
@@ -364,7 +401,7 @@ if __name__ == "__main__":
         res.showresults(args['results'], "results/results.json", showplots=True)
     elif args['calc']:
         idd = args['calc'] - 1
-        calculate(idd, n_jobs, debug)
+        calculate(idd, n_jobs, debug, dr)
     elif len(fs_selection_methods['Random']) > 1:
         raise ValueError("Using Random with more than one argument would lead to false results")
     else:
@@ -375,4 +412,4 @@ if __name__ == "__main__":
             pass  # No Selection method was given so just return
         else:
             makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug,
-                    args['keepfl'], set_fl)
+                    args['keepfl'], set_fl, dr)

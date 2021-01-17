@@ -5,7 +5,10 @@ lzip = lambda *x: list(zip(*x))
 import dill
 import time
 import pandas as pd
+import numpy as np
 import copy
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 def mpmap(func, iterable, chunksize=10, poolsize=2):
     import multiprocessing as mp

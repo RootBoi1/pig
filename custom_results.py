@@ -8,7 +8,7 @@ from collections import defaultdict
 from operator import itemgetter
 
 
-def getresults2(numrandomtasks=10000, n_best=10, tmpdirectory="tmp"):
+def getresults2(numrandomtasks=10000, n_best=10, tmpdirectory="/scratch/bi01/guest02/pig"):
     """
     Calculates the average F1 scores random featurelist over every fold.
     Collects these into a histogram and dumps them into the results directory.
@@ -38,9 +38,9 @@ def getresults2(numrandomtasks=10000, n_best=10, tmpdirectory="tmp"):
 
     i = 0
     j = 0
-    for rfile in os.listdir(f"{tmpdirectory}/task_results"):
+    for rfile in os.listdir(f"/scratch/task_results_30_10000"):
         taskid = int(rfile.split(".")[0])
-        f = b.loadfile(f"{tmpdirectory}/task_results/{rfile}")
+        f = b.loadfile(f"{tmpdirectory}/task_results_30_10000/{rfile}")
         scores = f[1]
         fl = f[3] # Featurelist
         tpr, precision = scores[2][0], scores[2][2]
@@ -175,7 +175,7 @@ if __name__ == "__main__":
                                                                         'directory from pig.py')
     args = vars(parser.parse_args())
 
-    tmpdirectory = "/scratch/bi01/mautner/guest10/tmp" ##########
+    tmpdirectory = "/scratch/bi01/guest02/tmp" ##########
 
     if args['histo']:
         numrandomtasks = args['numrandom'][0]

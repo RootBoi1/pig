@@ -3,7 +3,7 @@ from sklearn.base import clone
 from sklearn.metrics import f1_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 from sklearn.preprocessing import StandardScaler
-import optimization.randomsearch as  rs
+import optimization.randomsearch as rs
 import traceback as tb
 
 
@@ -36,7 +36,7 @@ def execute_classifier_string(clfname):
     return clf
 
 
-def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug):
+def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, model=None):
     """
     Args:
       task (list): A task made by maketasks().
@@ -45,9 +45,9 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug):
       debug (bool): True if debug mode.
     """
     X_train, X_test, y_train, y_test = foldxy
-    X_train = StandardScaler().fit_transform(X_train)
-    X_train = np.array(X_train)[:,mask]
-    X_test = np.array(X_test)[:,mask]
+    # X_train = StandardScaler().fit_transform(X_train)
+    # X_train = np.array(X_train)[:,mask]
+    # X_test = np.array(X_test)[:,mask]
     if len(clfname) < 20:
         clf_param = rs.classifiers[clfname]
         clf_param[1]["random_state"] = [randseed]
@@ -88,4 +88,4 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug):
     acc_score = (tpr, tnr, precision)
     scores = (best_esti_score, test_score, acc_score)
     #return foldnr, scores, best_esti, task[3], task[4], y_labels
-    return scores, best_esti, y_labels, coefs #####
+    return scores, best_esti, y_labels, coefs#####
