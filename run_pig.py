@@ -25,79 +25,8 @@ def run_all(num_neg, fs_method, param, dr=""):
             os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
             os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
 
-def run_random(num_randf, numneg, dr=""):
-    dimension_r = ""
-    if dr:
-        dimension_r = " -dr " + dr
-    for i in num_neg:
-        for j in num_randf:
-            os.system(f"""python pig.py --numneg {i} --random {j} 1 -f --clf 'from sklearn.ensemble import"""\
-                    """ GradientBoostingClassifier as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'""" + dimension_r)
-            if dr:
-                dim = f"_{dr}"
-            else:
-                dim = ""
-            if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_random" + dim):
-                os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_random" + dim)
-            os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_random" + dim)
-            os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_random" + dim)
 
 
-def run_svc1(num_neg, c, dr=""):
-    dimension_r = ""
-    if dr:
-        dimension_r = " -dr " + dr
-    for j in c:
-        for i in num_neg:
-            os.system(f"""python pig.py --numneg {i} --svc1 {j} -f --clf 'from sklearn.ensemble import"""\
-                    """ GradientBoostingClassifier as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'""" + dimension_r)
-            if dr:
-                dim = f"_{dr}"
-            else:
-                dim = ""
-            if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_svc1" + dim):
-                os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_svc1" + dim)
-            os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_svc1" + dim)
-            os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_svc1" + dim)
-
-
-def run_default(num_neg, dr=""):
-    o = open(f"{homedir}/pig/results/best_ft_list.json", "r")
-    fl = json.load(o)
-    dimension_r = ""
-    if dr:
-        dimension_r = " -dr " + dr
-    for i in num_neg:
-        os.system("""python pig.py --numneg %d --featurelist "%s" -f --clf 'from sklearn.ensemble import"""\
-                """ GradientBoostingClassifier as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'""" % (i,  fl) + dimension_r)
-        if dr:
-            dim = f"_{dr}"
-        else:
-            dim = ""
-        if os.path.exists(f"{homedir}/pig/task_results_{i}_default" + dim):
-            os.system(f"rm -r {homedir}/pig/task_results_{i}_default" + dim)
-        os.system(f"mkdir {homedir}/pig/task_results_{i}_default" + dim)
-        os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_default" + dim)
-        
-
-def run_kbest(num_neg, k, dr=""):
-    dimension_r = ""
-    if dr:
-        dimension_r = " -dr " + dr
-    for j in k:
-        for i in num_neg:
-            os.system(f"""python pig.py --numneg {i} --kbest {j} -f --clf 'from sklearn.ensemble import"""\
-                    """ GradientBoostingClassifier as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'""" + dimension_r)
-            if dr:
-                dim = f"_{dr}"
-            else:
-                dim = ""
-            if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_kbest" + dim):
-                os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_kbest" + dim)
-            os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_kbest" + dim)
-            os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_kbest" + dim)
-
-        
 def get_score(result_dir, fl=False, fl_len=False):
     n = 0
     avg_fl_len = 0
@@ -191,13 +120,33 @@ def makeplot(num_neg, types):
     num_randf.sort()
     c.sort()
     k.sort()
+    folders = []
     for task_results in os.listdir(f"{homedir}/pig"):
         if "task_results" in task_results:
             split = task_results.split("_")
             if split[4] in types:
-                plt.plot(get_score(f"{homedir}/pig/{task_results}", fl_len=True),
-                         get_score(f"{homedir}/pig/{task_results}"), 'o', label=f"{task_results[13:]}")
+                folders.append(task_results)
+                # plt.plot(get_score(f"{homedir}/pig/{task_results}", fl_len=True),
+                #         get_score(f"{homedir}/pig/{task_results}"), 'o', label=f"{task_results[13:]}")
 
+    folders.sort(key=lambda x: (float(x.split("_")[3]), x.split("_")[4], x.split("_")[2]))
+    plot_dataX = []
+    plot_dataY = []
+    for i in range(len(folders)):
+        if i != 0:
+            if folders[i].split("_")[3] != folders[i-1].split("_")[3] or folders[i].split("_")[4] != folders[i-1].split("_")[4]:
+                plt.plot(plot_dataX[0], plot_dataY[0], 'o')
+                try:
+                    plt.plot(plot_dataX[1], plot_dataY[1], 'o')
+                except:
+                    print("Only one datapoint exists")
+                plt.plot(plot_dataX, plot_dataY, label=folders[i-1][folders[i-1].index(folders[i-1].split("_")[3]):])
+                plot_dataX = []
+                plot_dataY = []
+        plot_dataX.append(get_score(f"{homedir}/pig/{folders[i]}", fl_len=True))
+        plot_dataY.append(get_score(f"{homedir}/pig/{folders[i]}"))
+    plt.plot(plot_dataX, plot_dataY, label=folders[-1][folders[-1].index(folders[-1].split("_")[3]):])
+    plt.plot(plot_dataX[0], plot_dataY[0], 'o')
     """for i in num_neg:
         for j in num_randf:
             if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_random"):
@@ -235,7 +184,7 @@ def makeplot(num_neg, types):
     plt.ylim(0, 0.5)
     plt.legend(fontsize=9, loc=(1.05, 0))
     plt.tight_layout()
-    plt.savefig(f"{homedir}/pig/results/F1_scores")
+    plt.savefig(f"{homedir}/pig/results/F1_scores_{types}")
     print(f"{time() - starttime}: Done")
     
 
