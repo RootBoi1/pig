@@ -3,27 +3,35 @@ import json
 import random
 import argparse
 import matplotlib.pyplot as plt
+from time import time
 from collections import Counter, defaultdict
 
 
 homedir = "/scratch/bi01/guest02"
 
-def run_all(num_neg, fs_method, param, dr=""):
-    dimension_r = ""
-    if dr:
-        dimension_r = " -dr " + dr
+def run_all(num_neg, fs_method, param, dr):
+    print(dr)
+    dtext = ""
     for j in param:
         for i in num_neg:
-            os.system(f"""python pig.py --numneg {i} -f --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
-                      f""" as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")' --{fs_method} {j}""" + dimension_r)
-            if dr:
-                dim = f"_{dr}"
+            if dr[1]:
+                for k in dr[1]:
+                    dim = f"_{dr[0]}_{k}"
+                    dtext = f" --{dr[0]} {k}"
+                    os.system(f"""python pig.py --numneg {i} -f --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
+                              f""" as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")' --{fs_method} {j}""" + dtext)
+                    if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim):
+                        os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
+                    os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
+                    os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
             else:
-                dim = ""
-            if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim):
-                os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
-            os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
-            os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
+                dim = "__"
+                os.system(f"""python pig.py --numneg {i} -f --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
+                          f""" as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")' --{fs_method} {j}""")
+                if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim):
+                    os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
+                os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
+                os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
 
 
 
@@ -84,103 +92,29 @@ def get_best_fl(num_randf, num_neg, fl=True):
 
 
 def makeplot(num_neg, types):
-    from time import time
     starttime = time()
-    plot_data_random = defaultdict(list)
-    plot_data_svc1 = defaultdict(list)
-    plot_data_kbest = defaultdict(list)
-    plot_data_default = []
-    num_randf = []
-    c = []
-    k = []
-    for d in os.listdir(f"{homedir}/pig"):
-        if "task_results" in d:
-            if "default" in d:
-                continue
-            else:
-                param = d.split("_")[3]
-                if "svc1" in d:
-                    if float(param) in c:
-                        continue
-                    else:
-                        if float(param) % 1 == 0:
-                            c.append(int(param))
-                        else:
-                            c.append(float(param))
-                elif "random" in d:
-                    if int(param) in num_randf:
-                        continue
-                    else:
-                        num_randf.append(int(param))
-                elif "kbest" in d:
-                    if int(param) in k:
-                        continue
-                    else:
-                        k.append(int(param))
-    num_randf.sort()
-    c.sort()
-    k.sort()
     folders = []
     for task_results in os.listdir(f"{homedir}/pig"):
         if "task_results" in task_results:
             split = task_results.split("_")
             if split[4] in types:
                 folders.append(task_results)
-                # plt.plot(get_score(f"{homedir}/pig/{task_results}", fl_len=True),
-                #         get_score(f"{homedir}/pig/{task_results}"), 'o', label=f"{task_results[13:]}")
-
-    folders.sort(key=lambda x: (float(x.split("_")[3]), x.split("_")[4], x.split("_")[-1], x.split("_")[2]))
+    folders.sort(key=lambda x: (x.split("_")[4], x.split("_")[5], x.split("_")[6], float(x.split("_")[3])))
     plot_dataX = []
     plot_dataY = []
     for i in range(len(folders)):
         if i != 0:
-            if folders[i][19:] != folders[i-1][19:]:
-                # Plot the first i-1 plot points
-                for j in range(len(plot_dataX) - 1):
-                    plt.plot(plot_dataX[j], plot_dataY[j], 'o')
-                plt.plot(plot_dataX, plot_dataY, label=folders[i-1][folders[i-1].index(folders[i-1].split("_")[3]):])
+            if folders[i-1].split("_")[6] != folders[i].split("_")[6]:
+                splits = folders[i-1].split("_")
+                plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{split[5]}-{splits[6]}", marker='o')
                 plot_dataX = []
                 plot_dataY = []
         plot_dataX.append(get_score(f"{homedir}/pig/{folders[i]}", fl_len=True))
         plot_dataY.append(get_score(f"{homedir}/pig/{folders[i]}"))
-    for j in range(len(plot_dataX) - 1):
-        plt.plot(plot_dataX[j], plot_dataY[j], 'o')
-    plt.plot(plot_dataX, plot_dataY, label=folders[-1][folders[-1].index(folders[-1].split("_")[3]):])
-    """for i in num_neg:
-        for j in num_randf:
-            if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_random"):
-                plot_data_random[j].append((i, get_score(f"{homedir}/pig/task_results_{i}_{j}_random")))
-        for j in c:
-            if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_svc1"):
-                plot_data_svc1[j].append((i, get_score(f"{homedir}/pig/task_results_{i}_{j}_svc1")))
-        for j in k:
-            if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_kbest"):
-                plot_data_kbest[j].append((i, get_score(f"{homedir}/pig/task_results_{i}_{j}_kbest")))
-        if os.path.exists(f"{homedir}/pig/task_results_{i}_default"):
-            plot_data_default.append(get_score(f"{homedir}/pig/task_results_{i}_default"))
-    if "random" in types:
-        for x in plot_data_random.keys():
-            f1_scores = [0] * len(num_neg)
-            for res in plot_data_random[x]:
-                f1_scores[num_neg.index(res[0])] = res[1]
-            plt.plot(num_neg, f1_scores, label=f"Random_{x}")
-    if "svc1" in types:
-        for x in plot_data_svc1.keys():
-            f1_scores = [0] * len(num_neg) 
-            for res in plot_data_svc1[x]:
-                f1_scores[num_neg.index(res[0])] = res[1]
-            plt.plot(num_neg, f1_scores, label=f"Svc1_{x}")
-    if "kbest" in types:
-        for x in plot_data_kbest.keys():
-            f1_scores = [0] * len(num_neg)
-            for res in plot_data_kbest[x]:
-                f1_scores[num_neg.index(res[0])] = res[1]
-            plt.plot(num_neg, f1_scores, label=f"Kbest_{x}")
-    if "default" in types:
-        plt.plot(num_neg, plot_data_default, label="Default")"""
+    plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{split[5]}-{splits[6]}", marker='o')
     plt.xlabel("Featurelist length")
     plt.ylabel("F1 scores")
-    plt.ylim(0, 0.5)
+    plt.ylim(0.2, 0.3)
     plt.legend(fontsize=9, loc=(1.05, 0))
     plt.tight_layout()
     plt.savefig(f"{homedir}/pig/results/F1_scores_{types}")
@@ -188,29 +122,42 @@ def makeplot(num_neg, types):
     
 
 if __name__ == "__main__":
+    starttime = time()
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--bestfl', action='store_true', help='Used for computing the best feature lists and f1 scores')
     parser.add_argument('--random', nargs='+', default=[], help='Used for executing with random features')
     parser.add_argument('--svc1', nargs='+', default=[], help='Used for executing with svc1 feature selection')
+    parser.add_argument('--svc2', nargs='+', default=[], help='Used for executing with svc2 feature selection')
     parser.add_argument('--kbest', nargs='+', default=[], help='Used for executing with kbest feature selection')
-    parser.add_argument('-d', '--default', action='store_true', help='Used for running with a set feature list.')
+    parser.add_argument('--forest', nargs='+', default=[], help='Used for executing with kbest feature selection')
+    parser.add_argument('--lasso', nargs='+', default=[], help='Used for executing with lasso feature selection')
+    parser.add_argument('--relief', nargs='+', default=[], help='Used for executing with relief feature selection')
+
+    parser.add_argument('--pca', nargs='+', default=[], help='Used for executing with PCA dimension reduction')
+    parser.add_argument('--lda', nargs='+', default=[], help='Used for executing with LDA dimension reduction')
+    parser.add_argument('--umap', nargs='+', default=[], help='Used for executing with UMAP dimension reduction')
+    parser.add_argument('--autoencoder', nargs='+', default=[], help='Used for executing with lasso feature selection')
+
     parser.add_argument('--plot', nargs='+', type=str, default=[], help='Used for generating a results plot')
-    parser.add_argument('-dr', '--dimension_reduction', nargs=1, type=str, default=[], help='Used for performing dimension reduction on the featurelist')
-    num_neg = [10000, 30000, 50000]
-    fs_methods = ["svc1", "kbest", "random", "default"]
+
+    num_neg = [50000]
+
     args = parser.parse_args()
-    try:
-        dr = args.dimension_reduction[0]
-    except:
-        dr = ""
+
+    fs_methods = ["relief", "svc1", "kbest", "random", "default", "lasso", "svc2", "forest"]
+    dr_methods = {'pca': args.pca, 'lda': args.lda, 'umap': args.umap, 'autoencoder': args.autoencoder}
+
     for method in vars(args).keys():
-        if method in fs_methods and vars(args)[method]:
-            if method == "default":
-                run_all(num_neg, method, [""], dr)       
-            else:
-                run_all(num_neg, method, vars(args)[method], dr)       
+        for dmethod in dr_methods.keys():
+            if dr_methods[dmethod]:
+                if method in fs_methods and vars(args)[method]:
+                    if method == "default":
+                        run_all(num_neg, method, [""], [dmethod, dr_methods[dmethod]])
+                    else:
+                        run_all(num_neg, method, vars(args)[method], [dmethod, dr_methods[dmethod]])       
     if args.bestfl:
         get_best_fl(num_randf, num_neg)
     if args.plot:
         types = args.plot
         makeplot(num_neg, types)
+    print(f"Total time: {time() - starttime}")

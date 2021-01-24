@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
-#$ -l h_vmem=2G
-#$ -pe smp 4
+#$ -l h_vmem=8G
+# #$ -pe smp 4
 #$ -R y
 # -o and -e need to different for each user.
 #$ -o logs/pig_o/$JOB_ID.o_$TASK_ID
