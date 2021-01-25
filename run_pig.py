@@ -10,7 +10,7 @@ from collections import Counter, defaultdict
 homedir = "/scratch/bi01/guest02"
 
 def run_all(num_neg, fs_method, param, dr):
-    print(dr)
+    print(fs_method, param, dr)
     dtext = ""
     for j in param:
         for i in num_neg:
@@ -92,7 +92,6 @@ def get_best_fl(num_randf, num_neg, fl=True):
 
 
 def makeplot(num_neg, types):
-    starttime = time()
     folders = []
     for task_results in os.listdir(f"{homedir}/pig"):
         if "task_results" in task_results:
@@ -102,23 +101,32 @@ def makeplot(num_neg, types):
     folders.sort(key=lambda x: (x.split("_")[4], x.split("_")[5], x.split("_")[6], float(x.split("_")[3])))
     plot_dataX = []
     plot_dataY = []
+    plt.figure(1)
     for i in range(len(folders)):
         if i != 0:
             if folders[i-1].split("_")[6] != folders[i].split("_")[6]:
                 splits = folders[i-1].split("_")
-                plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{split[5]}-{splits[6]}", marker='o')
+                plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{splits[5]}-{splits[6]}", marker='o')
                 plot_dataX = []
                 plot_dataY = []
+            if folders[i-1].split("_")[5] != folders[i].split("_")[5] and folders[i].split("_")[5] != "":
+                plt.xlabel("Featurelist length")
+                plt.ylabel("F1 scores")
+                plt.ylim(0.0, 0.3)
+                plt.legend(fontsize=9, loc=(1.05, 0))
+                plt.tight_layout()
+                plt.savefig(f"{homedir}/pig/results/F1_scores_{types}_{folders[i-1].split('_')[5]}")
+                plt.figure(i)
         plot_dataX.append(get_score(f"{homedir}/pig/{folders[i]}", fl_len=True))
         plot_dataY.append(get_score(f"{homedir}/pig/{folders[i]}"))
-    plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{split[5]}-{splits[6]}", marker='o')
+    splits = folders[-1].split("_")
+    plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{splits[5]}-{splits[6]}", marker='o')
     plt.xlabel("Featurelist length")
     plt.ylabel("F1 scores")
-    plt.ylim(0.2, 0.3)
+    plt.ylim(0.0, 0.3)
     plt.legend(fontsize=9, loc=(1.05, 0))
     plt.tight_layout()
-    plt.savefig(f"{homedir}/pig/results/F1_scores_{types}")
-    print(f"{time() - starttime}: Done")
+    plt.savefig(f"{homedir}/pig/results/F1_scores_{types}_{folders[-1].split('_')[5]}")
     
 
 if __name__ == "__main__":
@@ -132,6 +140,7 @@ if __name__ == "__main__":
     parser.add_argument('--forest', nargs='+', default=[], help='Used for executing with kbest feature selection')
     parser.add_argument('--lasso', nargs='+', default=[], help='Used for executing with lasso feature selection')
     parser.add_argument('--relief', nargs='+', default=[], help='Used for executing with relief feature selection')
+    parser.add_argument('--default', nargs='+', default=[], help='Used for executing with set feature list')
 
     parser.add_argument('--pca', nargs='+', default=[], help='Used for executing with PCA dimension reduction')
     parser.add_argument('--lda', nargs='+', default=[], help='Used for executing with LDA dimension reduction')
@@ -144,17 +153,26 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    fs_methods = ["relief", "svc1", "kbest", "random", "default", "lasso", "svc2", "forest"]
+    fs_methods = {"relief": args.relief, "svc1": args.svc1, "kbest": args.kbest, "random": args.random,
+                  "default": args.default, "lasso": args.lasso, "svc2": args.svc2, "forest": args.forest}
     dr_methods = {'pca': args.pca, 'lda': args.lda, 'umap': args.umap, 'autoencoder': args.autoencoder}
+    fs_methods = {k: fs_methods[k] for k in fs_methods.keys() if fs_methods[k]}
+    dr_methods = {k: dr_methods[k] for k in dr_methods.keys() if dr_methods[k]}
 
-    for method in vars(args).keys():
-        for dmethod in dr_methods.keys():
-            if dr_methods[dmethod]:
-                if method in fs_methods and vars(args)[method]:
-                    if method == "default":
-                        run_all(num_neg, method, [""], [dmethod, dr_methods[dmethod]])
-                    else:
-                        run_all(num_neg, method, vars(args)[method], [dmethod, dr_methods[dmethod]])       
+    for fs in fs_methods.keys():
+        if dr_methods:
+            for dr in dr_methods.keys():
+                if fs == "default":
+                    run_all(num_neg, fs, [""], [dr, dr_methods[dr]])
+                else:
+                    run_all(num_neg, fs, fs_methods[fs], [dr, dr_methods[dr]])
+        else:
+            if fs == "default":
+                run_all(num_neg, fs, [""], ["", ""])
+            else:
+                run_all(num_neg, fs, fs_methods[fs], ["", ""])
+
+                    
     if args.bestfl:
         get_best_fl(num_randf, num_neg)
     if args.plot:

@@ -1,7 +1,7 @@
 from sklearn.feature_selection import (RFECV, VarianceThreshold,
                                        chi2, SelectKBest, SelectFromModel)
 from sklearn.linear_model import Lasso
-from skrebate import ReliefF
+from skrebate import ReliefF, SURF
 from sklearn.svm import SVC, LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 import numpy as np
@@ -37,7 +37,7 @@ def lasso(X_data, y_data, df, alpha):
 
 
 def relief(X_data, y_data, df, param):
-    clf = ReliefF()
+    clf = ReliefF(n_neighbors=50)
     clf.fit(X_data, y_data)
     # https://github.com/EpistasisLab/scikit-rebate
     return [df.columns[top] for top in clf.top_features_[:param]]
