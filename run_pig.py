@@ -37,41 +37,24 @@ def run_all(num_neg, fs_method, param, dr):
 
 def get_score(result_dir, fl=False, fl_len=False):
     n = 0
+    f1 = 0
     avg_fl_len = 0
-    f1_list = []
-    score_d = defaultdict(list)
-    avg_score_d = {}
     for k in os.listdir(result_dir):
-        task_id = int(k.split(".")[0])
         f = open(f"{result_dir}/{k}")
         data = json.load(f)
         if fl_len:
             avg_fl_len += len(data[3])
             n += 1
             continue
-        if "random" in result_dir: 
-            score_d[task_id % 1000].append((data[1][2][0], data[1][2][2]))
-        else:
-            score_d[task_id].append((data[1][2][0], data[1][2][2]))
+        f1 += float(data[1][1])
         n += 1
     if fl_len:
         return avg_fl_len / n
-    for key in score_d.keys():
-        sum_tpr, sum_precision = 0, 0
-        for tpr, precision in score_d[key]:
-            sum_tpr += tpr
-            sum_precision += precision
-        avg_tpr, avg_precision = sum_tpr / len(score_d[key]), sum_precision / len(score_d[key])
-        if avg_precision + avg_tpr != 0:
-            f1 = 2 * ((avg_precision * avg_tpr) / (avg_precision + avg_tpr))
-        else:
-            f1 = 0
-        f1_list.append(f1)
-        avg_score_d[key] = f1
     if fl:
         return avg_score_d
     else:
-        return sum(f1_list) / len(f1_list)
+        print(f1/n)
+        return f1/n
 
 
 def get_best_fl(num_randf, num_neg, fl=True):

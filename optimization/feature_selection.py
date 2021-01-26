@@ -53,13 +53,15 @@ def select_k_best(X_data, y_data, df, k):
     score_func=chi2
 
     clf = SelectKBest(score_func, k=k)
-    mini = 0
+    """mini = 0
     for x in range(0, len(X_data)):
         mini = min(min(X_data[x]), mini)
     if mini < 0:
         for x in range(0, len(X_data)):
             for y in range(0, len(X_data[x])):
-                X_data[x][y] -= mini
+                X_data[x][y] -= mini"""
+    if X_data.min() < 0:
+        X_data += abs(X_data.min())
     clf.fit(X_data, y_data)
     return [b for a, b in zip(clf.get_support(), df.columns) if a]
 
@@ -73,10 +75,10 @@ def rfecv(X_data, y_data, df, step, cv):
 
 
 def random_forest(X_data, y_data, df, args):
-    randseed, max_features = args
-    clf = RandomForestClassifier(max_features=max_features, random_state=randseed, n_jobs=1)
+    randseed, threshold= args
+    clf = RandomForestClassifier(random_state=randseed, n_jobs=1)
     clf.fit(X_data, y_data)
-    sel = SelectFromModel(clf, max_features=max_features, prefit=True)
+    sel = SelectFromModel(clf, threshold=threshold, prefit=True)
     support = sel.get_support(True)
     return [b for a, b in zip(clf.feature_importances_[support],  df.columns[support])]
 
