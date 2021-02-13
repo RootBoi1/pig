@@ -1,4 +1,5 @@
 import numpy as np
+import autosklearn.classification as autosk
 from sklearn.base import clone
 from sklearn.metrics import f1_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
@@ -45,9 +46,10 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
       debug (bool): True if debug mode.
     """
     X_train, X_test, y_train, y_test = foldxy
-    # X_train = StandardScaler().fit_transform(X_train)
-    # X_train = np.array(X_train)[:,mask]
-    # X_test = np.array(X_test)[:,mask]
+    if not model:
+        X_train = np.array(X_train)[:,mask]
+        X_test = np.array(X_test)[:,mask]
+        X_train = StandardScaler().fit_transform(X_train)
     if len(clfname) < 20:
         clf_param = rs.classifiers[clfname]
         clf_param[1]["random_state"] = [randseed]

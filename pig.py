@@ -196,9 +196,9 @@ def calculate(idd, n_jobs, debug):
       n_jobs (int): Number of parallel jobs made by the
                     random parameter search. Does nothing otherwise.
     """
-    # task = Foldnr, mask, clfname, ftlist, fname, randseed
-    task = b.loadfile(f"{tmpdirectory}/tasks.json")[
-        idd]  # = (foldnr, fstype, args, clfname, randseed) or (foldnr, clfname, randseed)
+    # task = foldnr, mask, clfname, ftlist, fname, randseed
+    task = b.loadfile(f"{tmpdirectory}/tasks.json")[idd]  
+    #    = (foldnr, fstype, args, clfname, randseed) or (foldnr, clfname, randseed)
     foldxy = np.load(f"{tmpdirectory}/folds.pkl", allow_pickle=True)[task[0]]
     df = pd.read_pickle(f"{tmpdirectory}/dataframe.pkl")
     if len(task) == 6:  # Normal procedure with Feature Selection first.
@@ -254,8 +254,8 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
         raise ValueError("Using --keepfl and --featurelist at once will lead to errors and is not allowed")
     # Load files
     print("Loading p and n files")
-    p, n = load_pn_files(use_rnaz, use_filters, numneg, randseed, debug)
-    # p, n = b.loadfile("posneg.json")  # Use 50k neg. Remove if not wanted
+    # p, n = load_pn_files(use_rnaz, use_filters, numneg, randseed, debug)
+    p, n = b.loadfile("posneg.json")  # Use 50k neg. Remove if not wanted
     if set_fl:  # Skip Feature selection process
         tasklen = make_set_fl_tasks(p, n, set_fl, clfnames, n_folds, randseed)
         print("Skip feature selection using set featurelist")
@@ -315,7 +315,7 @@ if __name__ == "__main__":
                         help='RFECV for Feature Selection. Warning: Insane runtime. Might never end')
     parser.add_argument('--svc1', nargs='+', type=float, default=[], help='SVC with L1 Regularization')
     parser.add_argument('--svc2', nargs='+', type=float, default=[], help='SVC with L2 Regularization')
-    parser.add_argument('--forest', nargs='+', type=int, default=[],
+    parser.add_argument('--forest', nargs='+', type=float, default=[],
                         help='RandomForestClassifier for Feature Selection')
     parser.add_argument('--random', nargs=2, type=int, default=[],
                         help='Must be exactly 2 numbers X, Y. X is number of features per random and Y the number of '

@@ -9,17 +9,21 @@ from collections import Counter, defaultdict
 
 homedir = "/scratch/bi01/guest02"
 
-def run_all(num_neg, fs_method, param, dr):
+def run_all(num_neg, fs_method, param, dr, clf):
     print(fs_method, param, dr)
     dtext = ""
+    if clf:
+        classifier = """ --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
+                     """as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'"""
+    else:
+        classifier = """ --clf"""
     for j in param:
         for i in num_neg:
             if dr[1]:
                 for k in dr[1]:
                     dim = f"_{dr[0]}_{k}"
                     dtext = f" --{dr[0]} {k}"
-                    os.system(f"""python pig.py --numneg {i} -f --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
-                              f""" as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")' --{fs_method} {j}""" + dtext)
+                    os.system(f"""python pig.py --numneg {i} -f --{fs_method} {j}""" + classifier + dtext)
                     if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim):
                         os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
                     os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
@@ -53,7 +57,6 @@ def get_score(result_dir, fl=False, fl_len=False):
     if fl:
         return avg_score_d
     else:
-        print(f1/n)
         return f1/n
 
 
@@ -84,15 +87,31 @@ def makeplot(num_neg, types):
     folders.sort(key=lambda x: (x.split("_")[4], x.split("_")[5], x.split("_")[6], float(x.split("_")[3])))
     plot_dataX = []
     plot_dataY = []
+    default_plot = []
     plt.figure(1)
     for i in range(len(folders)):
+        curr_split = folders[i].split("_")
         if i != 0:
-            if folders[i-1].split("_")[6] != folders[i].split("_")[6]:
-                splits = folders[i-1].split("_")
+            last_split = folders[i-1].split("_")
+            if last_split[4] != curr_split[4]:
+                default_plot = []
+            if last_split[6] != curr_split[6]:
+                splits = last_split
+                if last_split[6] == "" and last_split[5] == "":
+                    default_plot.append(plot_dataX)
+                    default_plot.append(plot_dataY)
+                    default_plot.append(f"{splits[4]}-{splits[5]}-{splits[6]}")
+                    plot_dataX = []
+                    plot_dataY = []
+                    continue
                 plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{splits[5]}-{splits[6]}", marker='o')
                 plot_dataX = []
                 plot_dataY = []
-            if folders[i-1].split("_")[5] != folders[i].split("_")[5] and folders[i].split("_")[5] != "":
+            if last_split[5] != curr_split[5] and curr_split[5] != "":
+                params = [folders[i-3].split("_")[3], folders[i-2].split("_")[3], last_split[3]]
+                for x, y, z in zip(default_plot[0], default_plot[1], params):
+                    plt.annotate(z, (x,y), textcoords="offset points", xytext=(3,40), ha='center')
+                plt.plot(default_plot[0], default_plot[1], label=default_plot[2], marker='o')
                 plt.xlabel("Featurelist length")
                 plt.ylabel("F1 scores")
                 plt.ylim(0.0, 0.3)
@@ -103,7 +122,11 @@ def makeplot(num_neg, types):
         plot_dataX.append(get_score(f"{homedir}/pig/{folders[i]}", fl_len=True))
         plot_dataY.append(get_score(f"{homedir}/pig/{folders[i]}"))
     splits = folders[-1].split("_")
+    params = [folders[-3].split("_")[3], folders[-2].split("_")[3], folders[-1].split("_")[3]]
+    for x, y, z in zip(default_plot[0], default_plot[1], params):
+        plt.annotate(z, (x,y), textcoords="offset points", xytext=(3,40), ha='center')
     plt.plot(plot_dataX, plot_dataY, label=f"{splits[4]}-{splits[5]}-{splits[6]}", marker='o')
+    plt.plot(default_plot[0], default_plot[1], label=default_plot[2], marker='o')
     plt.xlabel("Featurelist length")
     plt.ylabel("F1 scores")
     plt.ylim(0.0, 0.3)
@@ -131,8 +154,9 @@ if __name__ == "__main__":
     parser.add_argument('--autoencoder', nargs='+', default=[], help='Used for executing with lasso feature selection')
 
     parser.add_argument('--plot', nargs='+', type=str, default=[], help='Used for generating a results plot')
+    parser.add_argument('--clf', action='store_true', help='True for using default clf, False for Randomized search clf')
 
-    num_neg = [50000]
+    num_neg = [30000]
 
     args = parser.parse_args()
 
@@ -146,14 +170,14 @@ if __name__ == "__main__":
         if dr_methods:
             for dr in dr_methods.keys():
                 if fs == "default":
-                    run_all(num_neg, fs, [""], [dr, dr_methods[dr]])
+                    run_all(num_neg, fs, [""], [dr, dr_methods[dr]], args.clf)
                 else:
-                    run_all(num_neg, fs, fs_methods[fs], [dr, dr_methods[dr]])
+                    run_all(num_neg, fs, fs_methods[fs], [dr, dr_methods[dr]], args.clf)
         else:
             if fs == "default":
-                run_all(num_neg, fs, [""], ["", ""])
+                run_all(num_neg, fs, [""], ["", ""], args.clf)
             else:
-                run_all(num_neg, fs, fs_methods[fs], ["", ""])
+                run_all(num_neg, fs, fs_methods[fs], ["", ""], args.clf)
 
                     
     if args.bestfl:
