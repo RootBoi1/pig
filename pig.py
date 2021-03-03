@@ -329,8 +329,10 @@ if __name__ == "__main__":
     parser.add_argument('--featurelist', nargs=1, type=str, default="",
                         help='A optional set featurelist. If this is not empty the feature selection methods will be '
                              'ignored')
-    parser.add_argument('--clf', nargs='+', type=str, default=['gradientboosting'],
-                        help='Either needs to be the name of a classifier (xtratrees, gradientboosting, neuralnet) or '
+    # Classifier v---------------------------------------------------------------------------------------------------
+    parser.add_argument('--clf', nargs='+', default=['Automl', 'gradient_boosting'],
+                        help='Must be two arguments, optimizer: (RSCV, Automl),'
+                             'classifier: (xtratrees, gradient_boosting, neuralnet) or '
                              'an executeable string that returns a classifier (in which case the inner cross '
                              'validation is disabled).')
     parser.add_argument('-n', '--nfolds', type=int, default=5, help='Number of folds kfold creates')
@@ -359,7 +361,10 @@ if __name__ == "__main__":
                             'SVC2': args['svc2'], 'Forest': args['forest'], 'Random': randargs}
     dim_reduction_methods = {'pca': args['pca'], 'lda': args['lda'], 'umap': args['umap'],
                              'autoencoder': args['autoencoder']}
-    clfnames = args['clf']
+    try:
+        clfnames = tuple(args['clf'])
+    except:
+        clfnames = args['clf']
     n_folds = args['nfolds']
     randseed = args['seed']
     numneg = args['numneg']  # Number of negative files beeing read by b.loaddata()

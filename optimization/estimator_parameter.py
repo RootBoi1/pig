@@ -7,6 +7,17 @@ from sklearn.preprocessing import StandardScaler
 import optimization.randomsearch as rs
 import traceback as tb
 
+def automl(X, y, clf, n_jobs, debug, randseed):
+    searcher = autosk.AutoSklearnClassifier(time_left_for_this_task=300 if not debug else 120,
+                                            n_jobs=n_jobs,
+                                            include_preprocessors = ["no_preprocessing"],
+                                            include_estimators=[clf],
+                                            seed=randseed,
+                                            memory_limit=16000/n_jobs)
+    searcher.fit(X, y)
+    best_esti_score = np.argmax(automl.cv_results_['mean_test_score']
+    return best_esti_score, searcher
+
 
 def score(X, y, clf_param, n_jobs, debug, randseed):
     clf, param = clf_param
@@ -50,11 +61,14 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
         X_train = np.array(X_train)[:,mask]
         X_test = np.array(X_test)[:,mask]
         X_train = StandardScaler().fit_transform(X_train)
-    if len(clfname) < 20:
-        clf_param = rs.classifiers[clfname]
-        clf_param[1]["random_state"] = [randseed]
-        best_esti_score, best_esti = score(X_train, y_train, clf_param, n_jobs, debug, randseed)
-        clf = clone(best_esti)
+    if len(clfname) == 2:
+        if clfname[0] == "RSCV":
+            clf_param = rs.classifiers[clfname[1]]
+            clf_param[1]["random_state"] = [randseed]
+            best_esti_score, best_esti = score(X_train, y_train, clf_param, n_jobs, debug, randseed)
+            clf = clone(best_esti)
+        elif clfname[0] == "Automl":
+            best_esti_score, best_esti = automl(X_train, y_train, clf_param, n_jobs, debug, randseed)
     else:
         clf = execute_classifier_string(clfname)
         best_esti_score = -1

@@ -15,8 +15,9 @@ def run_all(num_neg, fs_method, param, dr, clf):
     if clf:
         classifier = """ --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
                      """as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'"""
+        classifier = """ --clf Automl gradient_boosting"""
     else:
-        classifier = """ --clf"""
+        classifier = """ --clf RSCV gradient_boosting"""
     for j in param:
         for i in num_neg:
             if dr[1]:
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     parser.add_argument('--autoencoder', nargs='+', default=[], help='Used for executing with lasso feature selection')
 
     parser.add_argument('--plot', nargs='+', type=str, default=[], help='Used for generating a results plot')
-    parser.add_argument('--clf', action='store_true', help='True for using default clf, False for Randomized search clf')
+    parser.add_argument('--clf', action='store_true', help='True for using Automl clf, False for Randomized search clf')
 
     num_neg = [30000]
 

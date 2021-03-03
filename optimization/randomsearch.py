@@ -96,7 +96,7 @@ gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
 classifiers = { # {clfname: (Classifier, {parameters}), ...}
     'neuralnet': (MLPClassifier(), neuralnet_params), 
     'xtratrees': (ExtraTreesClassifier(), xtratrees_params), 
-    'gradientboosting': (GradientBoostingClassifier(), gradientboosting_params),
+    'gradient_boosting': (GradientBoostingClassifier(), gradientboosting_params),
     'os_neuralnet': (OS_MLPClassifier(), neuralnet_params),
     'os_xtratrees': (OS_ExtraTreesClassifier(), xtratrees_params),
     'os_gradientboosting': (OS_GradientBoostingClassifier(), gradientboosting_params)
