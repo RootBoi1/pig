@@ -17,7 +17,7 @@ def run_all(num_neg, fs_method, param, dr, clf):
                      """ as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'"""
     else:
         print("Using RSCV and gradientboosting")
-        classifier = """ --clf"""
+        classifier = """ --clf gradientboosting"""
     for j in param:
         for i in num_neg:
             if dr[1]:

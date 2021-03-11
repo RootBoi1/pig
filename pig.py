@@ -214,7 +214,6 @@ def calculate(idd, n_jobs, debug):
         fname = "Set Featurelist"
     else:
         raise ValueError("Incorrect number of arguments in the taskfile: {len(task)} should be 5 or 3")
-    print(clfname, n_jobs, randseed, debug, dim_r)
     if dim_r[1]:
         foldxy, model = dim_reduction.dimension_reduction(foldxy, mask, dim_r, randseed)
         scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
@@ -332,10 +331,9 @@ if __name__ == "__main__":
     parser.add_argument('--featurelist', nargs=1, type=str, default="",
                         help='A optional set featurelist. If this is not empty the feature selection methods will be '
                              'ignored')
-    parser.add_argument('--clf', nargs='+', type=str, default=['gradientboosting'],
-                        help='Either needs to be the name of a classifier (xtratrees, gradientboosting, neuralnet) or '
-                             'an executeable string that returns a classifier (in which case the inner cross '
-                             'validation is disabled).')
+    # Classifier v---------------------------------------------------------------------------------------------------
+    parser.add_argument('--clf', nargs='+', type=str, default=['gradient_boosting'],
+                        help='Needs to be a name of a classifier or an executable string that returns a classifier')
     parser.add_argument('-n', '--nfolds', type=int, default=5, help='Number of folds kfold creates')
     parser.add_argument('--numneg', type=int, default=10000,
                         help='Number of negative (and max of positive) files beeing loaded')

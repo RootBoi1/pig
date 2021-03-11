@@ -7,12 +7,11 @@ from sklearn.preprocessing import StandardScaler
 import optimization.randomsearch as rs
 import traceback as tb
 
-
 def score(X, y, clf_param, n_jobs, debug, randseed):
     clf, param = clf_param
     searcher = RSCV(clf, 
                 param, 
-                n_iter=10 if not debug else 5, 
+                n_iter=5 if not debug else 5, 
                 scoring="f1",
                 n_jobs=n_jobs,
                 #iid=False,
