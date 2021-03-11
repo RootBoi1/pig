@@ -142,14 +142,17 @@ def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr
             for fstype, parameters in fs_selection_methods.items():
                 for args in parameters:
                     for dtype, dparam in dr.items():
-                        if fstype == "Random":
-                            num_features, num_random_tasks = args
-                            for seed in range(num_random_tasks):  # Keep in mind this seed IS NOT randseed
-                                tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (dtype, dparam)))
-                        elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2":
-                            tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (dtype, dparam)))
-                        else:
-                            tasks.append((foldnr, fstype, args, clfname, randseed, (dtype, dparam)))
+                        if not dparam:
+                            continue
+                        for dimension in dparam:
+                            if fstype == "Random":
+                                num_features, num_random_tasks = args
+                                for seed in range(num_random_tasks):  # Keep in mind this seed IS NOT randseed
+                                    tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (dtype, dimension)))
+                            elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2":
+                                tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (dtype, dimension)))
+                            else:
+                                tasks.append((foldnr, fstype, args, clfname, randseed, (dtype, dimension)))
     b.dumpfile(tasks, f"{tmpdirectory}/tasks.json")
     np.array(folds, dtype=object).dump(f"{tmpdirectory}/folds.pkl")
     df.to_pickle(f"{tmpdirectory}/dataframe.pkl")
@@ -211,6 +214,7 @@ def calculate(idd, n_jobs, debug):
         fname = "Set Featurelist"
     else:
         raise ValueError("Incorrect number of arguments in the taskfile: {len(task)} should be 5 or 3")
+    print(clfname, n_jobs, randseed, debug, dim_r)
     if dim_r[1]:
         foldxy, model = dim_reduction.dimension_reduction(foldxy, mask, dim_r, randseed)
         scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
@@ -254,8 +258,7 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
         raise ValueError("Using --keepfl and --featurelist at once will lead to errors and is not allowed")
     # Load files
     print("Loading p and n files")
-    # p, n = load_pn_files(use_rnaz, use_filters, numneg, randseed, debug)
-    p, n = b.loadfile("posneg.json")  # Use 50k neg. Remove if not wanted
+    p, n = load_pn_files(use_rnaz, use_filters, numneg, randseed, debug)
     if set_fl:  # Skip Feature selection process
         tasklen = make_set_fl_tasks(p, n, set_fl, clfnames, n_folds, randseed)
         print("Skip feature selection using set featurelist")
@@ -321,10 +324,10 @@ if __name__ == "__main__":
                         help='Must be exactly 2 numbers X, Y. X is number of features per random and Y the number of '
                              'different random selections.')
     # Dimension reduction v------------------------------------------------------------------------------------------
-    parser.add_argument('--pca', nargs='+', type=int, default=[], help='Dimension reduction with pca')
-    parser.add_argument('--lda', nargs='+', type=int, default=[], help='Dimension reduction with ldldaa')
-    parser.add_argument('--autoencoder', nargs='+', type=int, default=[], help='Dimension reduction with autoencoder')
-    parser.add_argument('--umap', nargs='+', type=int, default=[], help='Dimension reduction with umap')
+    parser.add_argument('--pca', nargs='+', type=int, default=0, help='Dimension reduction with pca')
+    parser.add_argument('--lda', nargs='+', type=int, default=0, help='Dimension reduction with ldldaa')
+    parser.add_argument('--autoencoder', nargs='+', type=int, default=0, help='Dimension reduction with autoencoder')
+    parser.add_argument('--umap', nargs='+', type=int, default=0, help='Dimension reduction with umap')
 
     parser.add_argument('--featurelist', nargs=1, type=str, default="",
                         help='A optional set featurelist. If this is not empty the feature selection methods will be '
@@ -344,50 +347,50 @@ if __name__ == "__main__":
                              'not be deleted and instead be used for this run to speed up the process. Cant be used '
                              'together with --featurelists')
 
-    args = vars(parser.parse_args())
-    debug = args['debug']
-    use_rnaz = args['rnaz']
-    use_filters = args['filters']
-    use_oversampling = args['oversample']
-    if args['random']:
-        randargs = [(args['random'][0], args['random'][1])]
+    args = parser.parse_args()
+    debug = args.debug
+    use_rnaz = args.rnaz
+    use_filters = args.filters
+    use_oversampling = args.oversample
+    if args.random:
+        randargs = [(args.random[0], args.random[1])]
     else:
         randargs = []
-    fs_selection_methods = {'Lasso': args['lasso'], 'VarThresh': args['varthresh'],
-                            'SelKBest': args['kbest'], 'Relief': args['relief'],
-                            'RFECV': args['rfecv'], 'SVC1': args['svc1'],
-                            'SVC2': args['svc2'], 'Forest': args['forest'], 'Random': randargs}
-    dim_reduction_methods = {'pca': args['pca'], 'lda': args['lda'], 'umap': args['umap'],
-                             'autoencoder': args['autoencoder']}
-    clfnames = args['clf']
-    n_folds = args['nfolds']
-    randseed = args['seed']
-    numneg = args['numneg']  # Number of negative files beeing read by b.loaddata()
+    fs_selection_methods = {'Lasso': args.lasso, 'VarThresh': args.varthresh,
+                            'SelKBest': args.kbest, 'Relief': args.relief,
+                            'RFECV': args.rfecv, 'SVC1': args.svc1,
+                            'SVC2': args.svc2, 'Forest': args.forest, 'Random': randargs}
+    dim_reduction_methods = {'pca': args.pca, 'lda': args.lda, 'umap': args.umap,
+                             'autoencoder': args.autoencoder}
+    clfnames = args.clf
+    n_folds = args.nfolds
+    randseed = args.seed
+    numneg = args.numneg  # Number of negative files beeing read by b.loaddata()
     n_jobs = 1  # Number of parallel jobs used by RandomizedSearchCV
-    if args['featurelist']:
-        set_fl = args['featurelist'][0].strip("'[]").split("', '")
+    if args.featurelist:
+        set_fl = args.featurelist[0].strip("'[]").split("', '")
     else:
         set_fl = []
 
-    if args['blacklist']:
+    if args.blacklist:
         blacklist.create_blacklist("data")
 
     if use_oversampling:  # Turns the used classifiers into their oversampling equivalents
         clfnames = ['os_' + s for s in clfnames]
 
-    if args['results']:  # Instead of executing other functions show previous results
-        res.showresults(args['results'], "results/results.json", showplots=True)
-    elif args['calc']:
-        idd = args['calc'] - 1
+    if args.results:  # Instead of executing other functions show previous results
+        res.showresults(args.results, "results/results.json", showplots=True)
+    elif args.calc:
+        idd = args.calc - 1
         calculate(idd, n_jobs, debug)
     elif len(fs_selection_methods['Random']) > 1:
         raise ValueError("Using Random with more than one argument would lead to false results")
     else:
-        cleanup(args['clean'], args['keepfl'])  # Remove data from previous runs
+        cleanup(args.clean, args.keepfl)  # Remove data from previous runs
         create_directories()  # Create all needed directories
-        if not (any(fs_selection_methods.values()) or set_fl or args['keepfl']):
+        if not (any(fs_selection_methods.values()) or set_fl or args.keepfl):
             print("No features or feature selection methods were given.")
             pass  # No Selection method was given so just return
         else:
             makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug,
-                    args['keepfl'], dim_reduction_methods, set_fl)
+                    args.keepfl, dim_reduction_methods, set_fl)

@@ -8,14 +8,15 @@ from collections import Counter, defaultdict
 
 
 homedir = "/scratch/bi01/guest02"
+task_results_dir = "/scratch/bi01/guest02/pig/RSCV_task_results"
 
 def run_all(num_neg, fs_method, param, dr, clf):
-    print(fs_method, param, dr)
-    dtext = ""
     if clf:
+        print("Using a set classifier")
         classifier = """ --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
-                     """as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'"""
+                     """ as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'"""
     else:
+        print("Using RSCV and gradientboosting")
         classifier = """ --clf"""
     for j in param:
         for i in num_neg:
@@ -24,18 +25,18 @@ def run_all(num_neg, fs_method, param, dr, clf):
                     dim = f"_{dr[0]}_{k}"
                     dtext = f" --{dr[0]} {k}"
                     os.system(f"""python pig.py --numneg {i} -f --{fs_method} {j}""" + classifier + dtext)
-                    if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim):
-                        os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
-                    os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
-                    os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
+                    if os.path.exists(f"{task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim):
+                        os.system(f"rm -r {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
+                    os.system(f"mkdir {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
+                    os.system(f"mv {homedir}/tmp/task_results/*.json {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
             else:
                 dim = "__"
                 os.system(f"""python pig.py --numneg {i} -f --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
                           f""" as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")' --{fs_method} {j}""")
-                if os.path.exists(f"{homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim):
-                    os.system(f"rm -r {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
-                os.system(f"mkdir {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
-                os.system(f"mv {homedir}/tmp/task_results/*.json {homedir}/pig/task_results_{i}_{j}_{fs_method}" + dim)
+                if os.path.exists(f"{task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim):
+                    os.system(f"rm -r {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
+                os.system(f"mkdir {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
+                os.system(f"mv {homedir}/tmp/task_results/*.json {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
 
 
 
@@ -64,9 +65,9 @@ def get_best_fl(num_randf, num_neg, fl=True):
     best_fl= {}
     for i in num_randf:
         for j in num_neg:
-            feature_list = get_score(f"{homedir}/pig/task_results_{j}_{i}_random", fl=True)
+            feature_list = get_score(f"{task_results_dir}/task_results_{j}_{i}_random", fl=True)
             best_fl_id = sorted(feature_list.items(), key=lambda x: x[1])[-1][0]
-            f = open(f"{homedir}/pig/task_results_{j}_{i}_random/{best_fl_id}.json")
+            f = open(f"{task_results_dir}/task_results_{j}_{i}_random/{best_fl_id}.json")
             best_fl[f"({i}, {j})"] = (best_fl_id, json.load(f)[3])
     o = open(f"{homedir}/pig/results/best_ft_list.json", "w")
     json.dump(best_fl[f"({num_randf[-1]}, {num_neg[-1]})"], o)
@@ -79,7 +80,7 @@ def get_best_fl(num_randf, num_neg, fl=True):
 
 def makeplot(num_neg, types):
     folders = []
-    for task_results in os.listdir(f"{homedir}/pig"):
+    for task_results in os.listdir(f"{task_results_dir}"):
         if "task_results" in task_results:
             split = task_results.split("_")
             if split[4] in types:
@@ -119,8 +120,8 @@ def makeplot(num_neg, types):
                 plt.tight_layout()
                 plt.savefig(f"{homedir}/pig/results/F1_scores_{types}_{folders[i-1].split('_')[5]}")
                 plt.figure(i)
-        plot_dataX.append(get_score(f"{homedir}/pig/{folders[i]}", fl_len=True))
-        plot_dataY.append(get_score(f"{homedir}/pig/{folders[i]}"))
+        plot_dataX.append(get_score(f"{task_results_dir}/{folders[i]}", fl_len=True))
+        plot_dataY.append(get_score(f"{task_results_dir}/{folders[i]}"))
     splits = folders[-1].split("_")
     params = [folders[-3].split("_")[3], folders[-2].split("_")[3], folders[-1].split("_")[3]]
     for x, y, z in zip(default_plot[0], default_plot[1], params):
@@ -154,9 +155,9 @@ if __name__ == "__main__":
     parser.add_argument('--autoencoder', nargs='+', default=[], help='Used for executing with lasso feature selection')
 
     parser.add_argument('--plot', nargs='+', type=str, default=[], help='Used for generating a results plot')
-    parser.add_argument('--clf', action='store_true', help='True for using default clf, False for Randomized search clf')
+    parser.add_argument('--clf', action='store_true', help='Use for using set clf')
 
-    num_neg = [30000]
+    num_neg = [50000]
 
     args = parser.parse_args()
 
@@ -165,7 +166,6 @@ if __name__ == "__main__":
     dr_methods = {'pca': args.pca, 'lda': args.lda, 'umap': args.umap, 'autoencoder': args.autoencoder}
     fs_methods = {k: fs_methods[k] for k in fs_methods.keys() if fs_methods[k]}
     dr_methods = {k: dr_methods[k] for k in dr_methods.keys() if dr_methods[k]}
-
     for fs in fs_methods.keys():
         if dr_methods:
             for dr in dr_methods.keys():
