@@ -8,13 +8,13 @@ from collections import Counter, defaultdict
 
 
 homedir = "/scratch/bi01/guest02"
-task_results_dir = "/scratch/bi01/guest02/pig/RSCV_task_results"
+task_results_dir = "/scratch/bi01/guest02/pig/BSCV_task_results"
 
 def run_all(num_neg, fs_method, param, dr, clf):
     if clf:
         print("Using a set classifier")
         classifier = """ --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
-                     """ as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")'"""
+                     """ as gbc; clf=gbc(n_estimators=350, learning_rate=0.25, max_features=None, max_depth=5)'"""
     else:
         print("Using RSCV and gradientboosting")
         classifier = """ --clf gradientboosting"""
@@ -31,8 +31,7 @@ def run_all(num_neg, fs_method, param, dr, clf):
                     os.system(f"mv {homedir}/tmp/task_results/*.json {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
             else:
                 dim = "__"
-                os.system(f"""python pig.py --numneg {i} -f --clf 'from sklearn.ensemble import GradientBoostingClassifier"""\
-                          f""" as gbc; clf=gbc(n_estimators=300, learning_rate=0.3, max_features="sqrt")' --{fs_method} {j}""")
+                os.system(f"""python pig.py --numneg {i} -f --{fs_method} {j}""" + classifier)
                 if os.path.exists(f"{task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim):
                     os.system(f"rm -r {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)
                 os.system(f"mkdir {task_results_dir}/task_results_{i}_{j}_{fs_method}" + dim)

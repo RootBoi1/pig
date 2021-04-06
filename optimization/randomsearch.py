@@ -1,6 +1,7 @@
 # define parameters for the random search 
 
 import pprint
+from skopt.space import Real, Categorical, Integer
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -92,11 +93,20 @@ gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
      'verbose': [0],
      'warm_start': [False]}
 
+gradientboosting_skopt_params = {'learning_rate': Real(0.001, 0.9),
+     'loss': Categorical(['deviance','exponential']),
+     'max_depth': Integer(5,16),
+     'max_features': Categorical(['sqrt','log2', None]),
+     'min_samples_leaf': Integer(1, 7),
+     'min_samples_split': Integer(2, 7),
+     'n_estimators':  Integer(50, 400),
+     'tol': Real(0.00001, 0.1)}
+
 
 classifiers = { # {clfname: (Classifier, {parameters}), ...}
     'neuralnet': (MLPClassifier(), neuralnet_params), 
     'xtratrees': (ExtraTreesClassifier(), xtratrees_params), 
-    'gradientboosting': (GradientBoostingClassifier(), gradientboosting_params),
+    'gradientboosting': (GradientBoostingClassifier(), gradientboosting_skopt_params),
     'os_neuralnet': (OS_MLPClassifier(), neuralnet_params),
     'os_xtratrees': (OS_ExtraTreesClassifier(), xtratrees_params),
     'os_gradientboosting': (OS_GradientBoostingClassifier(), gradientboosting_params)

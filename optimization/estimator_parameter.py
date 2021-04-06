@@ -1,9 +1,9 @@
 import numpy as np
-import autosklearn.classification as autosk
 from sklearn.base import clone
 from sklearn.metrics import f1_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 from sklearn.preprocessing import StandardScaler
+from imblearn.over_sampling import RandomOverSampler
 import optimization.randomsearch as rs
 import traceback as tb
 
@@ -11,7 +11,7 @@ def score(X, y, clf_param, n_jobs, debug, randseed):
     clf, param = clf_param
     searcher = RSCV(clf, 
                 param, 
-                n_iter=5 if not debug else 5, 
+                n_iter=100 if not debug else 5, 
                 scoring="f1",
                 n_jobs=n_jobs,
                 #iid=False,
@@ -58,6 +58,8 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
         clf = execute_classifier_string(clfname)
         best_esti_score = -1
         best_esti = clf
+    os = RandomOverSampler(random_state=randseed)
+    # X_train, y_train = os.fit_resample(X_train, y_train)
     clf.fit(X_train, y_train)
     ######
     try:

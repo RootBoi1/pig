@@ -4,6 +4,7 @@ from sklearn.linear_model import Lasso
 from skrebate import ReliefF, SURF
 from sklearn.svm import SVC, LinearSVC
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.cluster import AgglomerativeClustering
 import numpy as np
 #####################
 # Feature selection methods.
@@ -14,7 +15,8 @@ def svcl1(X_data, y_data, df, args):
     Linear Support Vector Classification with L1 Regularization.
     """
     randseed, C = args
-    clf = LinearSVC(penalty="l1", dual=False, random_state=randseed, C=C)
+    clf = LinearSVC(penalty="l1", dual=False, random_state=randseed,
+                    C=C, class_weight='balanced')
     clf.fit(X_data, y_data)
     return [b for a, b in zip(clf.coef_[0], df.columns) if a]
 
@@ -83,6 +85,29 @@ def random_forest(X_data, y_data, df, args):
     return [b for a, b in zip(clf.feature_importances_[support],  df.columns[support])]
 
 
+def agglomerative_clustering(X_data, df, args):
+    seed, n_clusters = args
+    clf = AgglomerativeClustering(n_clusters=n_clusters) 
+    X_data = np.transpose(X_data)
+    clf.fit(X_data)
+    labels = clf.labels_
+    labels = [x + 1 for x in labels]
+    for i in range(1, n_clusters+1):
+        indices = [x for x, y in enumerate(labels) if y==i]
+        dataframe = df.iloc[:, indices]
+        corr_matrix = dataframe.corr().abs().unstack()
+        cols = dataframe.columns
+        to_drop = {(cols[i], cols[j]) for i in range(dataframe.shape[1]) for j in range(i+1)}
+        highest_abs_corr = corr_matrix.drop(labels=to_drop).sort_values(ascending=False)
+        highest_abs_corr = highest_abs_corr[0:1]  # Get the top correlating pair
+        label_names = list(set([i for x in highest_abs_corr.index.values for i in x]))
+        label_indices = [df.columns.get_loc(x) for x in label_names]
+        for j in range(len(indices)):
+            if indices[j] not in label_indices:
+                labels[indices[j]] = 0
+    return [b for a, b in zip(labels, df.columns) if a]
+
+
 def random(X_data, y_data, df, args):
     """
     Args:
@@ -128,6 +153,8 @@ def feature_selection(foldxy, fstype, args, df):
         fl = random_forest(X_train, y_train, df, args)
     elif fstype == "Random":
         fl = random(X_train, y_train, df, args)
+    elif fstype == "AggloClust":
+        fl = agglomerative_clustering(X_train, df, args)
     else:
         raise ValueError(f"'{fstype}' is not a valid Feature selection method.")
     mask = [True if f in fl else False for f in df.columns]

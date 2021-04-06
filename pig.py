@@ -16,8 +16,6 @@ from collections import defaultdict
 tmpdirectory = "/scratch/bi01/guest02/tmp"
 
 
-# tmpdirectory = "tmp"
-
 def cleanup(keep_pn=True, keep_featurelists=False):
     """Cleans up the tmp folder to prevent inconsistencies when toggling debug.
     Other users will need to change the path with /scratch/bi01/...
@@ -141,18 +139,26 @@ def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr
         for clfname in clfnames:
             for fstype, parameters in fs_selection_methods.items():
                 for args in parameters:
-                    for dtype, dparam in dr.items():
-                        if not dparam:
-                            continue
-                        for dimension in dparam:
-                            if fstype == "Random":
-                                num_features, num_random_tasks = args
-                                for seed in range(num_random_tasks):  # Keep in mind this seed IS NOT randseed
-                                    tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (dtype, dimension)))
-                            elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2":
-                                tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (dtype, dimension)))
-                            else:
-                                tasks.append((foldnr, fstype, args, clfname, randseed, (dtype, dimension)))
+                    if dr:
+                        for dtype, dparam in dr.items():
+                            for dimension in dparam:
+                                if fstype == "Random":
+                                    num_features, num_random_tasks = args
+                                    for seed in range(num_random_tasks):  # Keep in mind this seed IS NOT randseed
+                                        tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (dtype, dimension)))
+                                elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2" or fstype == "AggloClust":
+                                    tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (dtype, dimension)))
+                                else:
+                                    tasks.append((foldnr, fstype, args, clfname, randseed, (dtype, dimension)))
+                    else:
+                        if fstype == "Random":
+                            num_features, num_random_tasks = args
+                            for seed in range(num_random_tasks):  # Keep in mind this seed IS NOT randseed
+                                tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (0, 0)))
+                        elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2" or fstype == "AggloClust":
+                            tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (0, 0)))
+                        else:
+                            tasks.append((foldnr, fstype, args, clfname, randseed, (0, 0)))
     b.dumpfile(tasks, f"{tmpdirectory}/tasks.json")
     np.array(folds, dtype=object).dump(f"{tmpdirectory}/folds.pkl")
     df.to_pickle(f"{tmpdirectory}/dataframe.pkl")
@@ -268,15 +274,7 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
         return
     # Calculation part -> Cluster
     print(f"{time() - starttime}: Sending {tasklen} tasks to cluster...")
-    i = 0
     starttask = 1
-    endtask = 75000
-    while tasklen > endtask:
-        b.shexec_and_wait(f"qsub -V -t {starttask}-{endtask} runall_tasks_sge.sh")
-        print(f"Finished tasks {starttask}-{endtask}")
-        i += 1
-        starttask += 75000
-        endtask += 75000
     b.shexec_and_wait(f"qsub -V -t {starttask}-{tasklen} runall_tasks_sge.sh")
     # Results
     print(f"{time() - starttime}: Gathering results...")
@@ -308,7 +306,7 @@ if __name__ == "__main__":
                              'turn select 0 features and break the program')
     parser.add_argument('--varthresh', nargs='+', type=float, default=[],
                         help='Variance Treshold for Feature Selection. Recommended values: .99 .995 1 1.005 1.01')
-    parser.add_argument('--kbest', nargs='+', type=int, default=[],
+    parser.add_argument('--kbest', nargs='+', default=[],
                         help='Select-K-Best for Feature Selection. Uses Chi2')
     parser.add_argument('--relief', nargs='+', type=int, default=[],
                         help='Relief for Feature Selection. Recommended values: 40 60 80. Warning: Needs very high '
@@ -317,6 +315,8 @@ if __name__ == "__main__":
                         help='RFECV for Feature Selection. Warning: Insane runtime. Might never end')
     parser.add_argument('--svc1', nargs='+', type=float, default=[], help='SVC with L1 Regularization')
     parser.add_argument('--svc2', nargs='+', type=float, default=[], help='SVC with L2 Regularization')
+    parser.add_argument('--aggloclust', nargs='+', type=int, default=[],
+                        help='Agglomeration Clustering choosing 3 features per cluster')
     parser.add_argument('--forest', nargs='+', type=float, default=[],
                         help='RandomForestClassifier for Feature Selection')
     parser.add_argument('--random', nargs=2, type=int, default=[],
@@ -356,10 +356,11 @@ if __name__ == "__main__":
         randargs = []
     fs_selection_methods = {'Lasso': args.lasso, 'VarThresh': args.varthresh,
                             'SelKBest': args.kbest, 'Relief': args.relief,
-                            'RFECV': args.rfecv, 'SVC1': args.svc1,
+                            'RFECV': args.rfecv, 'SVC1': args.svc1, 'AggloClust': args.aggloclust,
                             'SVC2': args.svc2, 'Forest': args.forest, 'Random': randargs}
     dim_reduction_methods = {'pca': args.pca, 'lda': args.lda, 'umap': args.umap,
                              'autoencoder': args.autoencoder}
+    dim_reduction_methods = {key: value for key, value in dim_reduction_methods.items() if value != 0}
     clfnames = args.clf
     n_folds = args.nfolds
     randseed = args.seed
