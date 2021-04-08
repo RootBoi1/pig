@@ -92,20 +92,18 @@ def agglomerative_clustering(X_data, df, args):
     clf.fit(X_data)
     labels = clf.labels_
     labels = [x + 1 for x in labels]
+    fl = []
     for i in range(1, n_clusters+1):
         indices = [x for x, y in enumerate(labels) if y==i]
         dataframe = df.iloc[:, indices]
-        corr_matrix = dataframe.corr().abs().unstack()
-        cols = dataframe.columns
-        to_drop = {(cols[i], cols[j]) for i in range(dataframe.shape[1]) for j in range(i+1)}
-        highest_abs_corr = corr_matrix.drop(labels=to_drop).sort_values(ascending=False)
-        highest_abs_corr = highest_abs_corr[0:1]  # Get the top correlating pair
-        label_names = list(set([i for x in highest_abs_corr.index.values for i in x]))
-        label_indices = [df.columns.get_loc(x) for x in label_names]
-        for j in range(len(indices)):
-            if indices[j] not in label_indices:
-                labels[indices[j]] = 0
-    return [b for a, b in zip(labels, df.columns) if a]
+        corr_matrix = dataframe.corr().abs()
+        # Only look at the upper triangle, since corr_matrix is symmetric
+        highest_abs_corr = (corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1)
+                            .astype(np.bool)).stack().sort_values(ascending=False))
+        label_names = [item for i in highest_abs_corr.index.values for item in i]
+        label_names = list(dict.fromkeys(label_names))[:2]
+        fl += label_names
+    return fl
 
 
 def random(X_data, y_data, df, args):
