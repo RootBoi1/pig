@@ -7,11 +7,12 @@ from imblearn.over_sampling import RandomOverSampler
 import optimization.randomsearch as rs
 import traceback as tb
 
+
 def score(X, y, clf_param, n_jobs, debug, randseed):
     clf, param = clf_param
     searcher = RSCV(clf, 
                 param, 
-                n_iter=100 if not debug else 5, 
+                n_iter=10 if not debug else 5, 
                 scoring="f1",
                 n_jobs=n_jobs,
                 #iid=False,
@@ -78,6 +79,7 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
     y_pred = clf.predict(X_test)
     y_pred = np.array(y_pred)
     test_score = f1_score(y_test, y_pred)
+    print(test_score)
     tpr = sum(y_pred[y_test == 1]) / sum(y_test == 1) # Sensitivity
     tnr = sum(y_pred[y_test == 0] == 0)/sum(y_test == 0) # Specificity
     #precision = tpr / (tpr + (1-tnr))

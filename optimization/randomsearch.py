@@ -91,12 +91,34 @@ gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
      'validation_fraction': [0.1],
      'verbose': [0],
      'warm_start': [False]}
+randomforest_params = {
+        'random_state': [None],
+        'class_weight': ['balanced', None],
+        'max_depth': list(range(5,20)),
+        'n_estimators': list(range(50,400)),
+        'min_samples_split': [2, 3, 4],
+        'criterion': ["gini"],
+        'min_samples_leaf': [1],
+        'min_weight_fraction_leaf': [0.0],
+        'max_features': ['auto', 'log2', None],
+        'max_leaf_nodes': [None],
+        'min_impurity_decrease': [0.0],
+        'min_impurity_split': [None],
+        'bootstrap': [True],
+        'oob_score': [False],
+        'n_jobs': [None],
+        'verbose': [0],
+        'warm_start': [False],
+        'ccp_alpha': [0.0],
+        'max_samples': [None]}
+
 
 
 classifiers = { # {clfname: (Classifier, {parameters}), ...}
     'neuralnet': (MLPClassifier(), neuralnet_params), 
     'xtratrees': (ExtraTreesClassifier(), xtratrees_params), 
     'gradientboosting': (GradientBoostingClassifier(), gradientboosting_params),
+    'randomforest': (RandomForestClassifier(random_state=42), randomforest_params),
     'os_neuralnet': (OS_MLPClassifier(), neuralnet_params),
     'os_xtratrees': (OS_ExtraTreesClassifier(), xtratrees_params),
     'os_gradientboosting': (OS_GradientBoostingClassifier(), gradientboosting_params)

@@ -20,10 +20,10 @@ def dimension_reduction(foldxy, mask, dr, seed):
     elif dtype == "autoencoder":
         pass
     elif dtype == "umap":
-        model = make_pipeline(StandardScaler(), umap.UMAP(n_components=num_features))
-    elif dtype == "lda":
         model = make_pipeline(StandardScaler(),
-                LinearDiscriminantAnalysis(n_components=num_features))
+                umap.UMAP(n_components=num_features, low_memory=True))
+    elif dtype == "lda":
+        model = LinearDiscriminantAnalysis(n_components=num_features)
     elif dtype == "nca":
         model = make_pipeline(StandardScaler(),
                 NeighborhoodComponentsAnalysis(random_state=seed, n_components=num_features)) 
