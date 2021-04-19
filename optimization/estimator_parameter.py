@@ -37,7 +37,7 @@ def execute_classifier_string(clfname):
     return clf
 
 
-def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, model=None):
+def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, model=None, os=False):
     """
     Args:
       task (list): A task made by maketasks().
@@ -59,8 +59,9 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
         clf = execute_classifier_string(clfname)
         best_esti_score = -1
         best_esti = clf
-    os = RandomOverSampler(random_state=randseed)
-    # X_train, y_train = os.fit_resample(X_train, y_train)
+    if os:
+        os = RandomOverSampler(random_state=randseed)
+        X_train, y_train = os.fit_resample(X_train, y_train)
     clf.fit(X_train, y_train)
     ######
     try:

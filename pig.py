@@ -110,7 +110,7 @@ def makefolds(p, n, n_folds, randseed):
 # Random Parameter Search
 #############
 
-def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr):
+def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling=0):
     """
     Creates and dumps tasks, dataframe and the folds created by kfold
     that are then read and executed by the cluster.
@@ -145,20 +145,20 @@ def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr
                                 if fstype == "Random":
                                     num_features, num_random_tasks = args
                                     for seed in range(num_random_tasks):  # Keep in mind this seed IS NOT randseed
-                                        tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (dtype, dimension)))
+                                        tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (dtype, dimension), use_oversampling))
                                 elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2" or fstype == "AggloClust":
-                                    tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (dtype, dimension)))
+                                    tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (dtype, dimension), use_oversampling))
                                 else:
-                                    tasks.append((foldnr, fstype, args, clfname, randseed, (dtype, dimension)))
+                                    tasks.append((foldnr, fstype, args, clfname, randseed, (dtype, dimension), use_oversampling))
                     else:
                         if fstype == "Random":
                             num_features, num_random_tasks = args
                             for seed in range(num_random_tasks):  # Keep in mind this seed IS NOT randseed
-                                tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (0, 0)))
+                                tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed, (0, 0), use_oversampling))
                         elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2" or fstype == "AggloClust":
-                            tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (0, 0)))
+                            tasks.append((foldnr, fstype, (randseed, args), clfname, randseed, (0, 0), use_oversampling))
                         else:
-                            tasks.append((foldnr, fstype, args, clfname, randseed, (0, 0)))
+                            tasks.append((foldnr, fstype, args, clfname, randseed, (0, 0), use_oversampling))
     b.dumpfile(tasks, f"{tmpdirectory}/tasks.json")
     np.array(folds, dtype=object).dump(f"{tmpdirectory}/folds.pkl")
     df.to_pickle(f"{tmpdirectory}/dataframe.pkl")
@@ -210,9 +210,10 @@ def calculate(idd, n_jobs, debug):
     #    = (foldnr, fstype, args, clfname, randseed) or (foldnr, clfname, randseed)
     foldxy = np.load(f"{tmpdirectory}/folds.pkl", allow_pickle=True)[task[0]]
     df = pd.read_pickle(f"{tmpdirectory}/dataframe.pkl")
-    if len(task) == 6:  # Normal procedure with Feature Selection first.
-        foldnr, fstype, args, clfname, randseed, dim_r = task
+    if len(task) == 7:  # Normal procedure with Feature Selection first.
+        foldnr, fstype, args, clfname, randseed, dim_r, oversampling = task
         ftlist, mask, fname = fs.feature_selection(foldxy, fstype, args, df)  # FS - Done.
+        print(len(ftlist))
     elif len(task) == 3:  # A set featurelist was used.
         foldnr, clfname, randseed = task
         ftlist = b.loadfile(f"{tmpdirectory}/set_fl.json")
@@ -223,10 +224,10 @@ def calculate(idd, n_jobs, debug):
     if dim_r[1]:
         foldxy, model = dim_reduction.dimension_reduction(foldxy, mask, dim_r, randseed)
         scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
-                                                                     debug, model)  ######
+                                                                     debug, model, os=oversampling)  ######
     else:
         scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
-                                                                     debug)  ######
+                                                                     debug, os=oversampling)  ######
     best_esti_params = best_esti.get_params()
     best_esti = (type(best_esti).__name__, best_esti_params)  # Creates readable tuple that can be dumped.
     b.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"{tmpdirectory}/task_results/{idd}.json")
@@ -253,7 +254,7 @@ def getresults():
 
 
 def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug, keep_featurelists,
-            dr, set_fl=[]):
+            dr, set_fl=[], use_oversampling=True):
     """
     Note: keep_featurelists is no longer working after code has been restructured - TODO.
     """
@@ -268,7 +269,7 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
         tasklen = make_set_fl_tasks(p, n, set_fl, clfnames, n_folds, randseed)
         print("Skip feature selection using set featurelist")
     else:
-        tasklen = maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr)
+        tasklen = maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling)
     if tasklen == 0:
         print("No tasks were created. Possibly used wrong parameters.")
         return
@@ -349,7 +350,10 @@ if __name__ == "__main__":
     debug = args.debug
     use_rnaz = args.rnaz
     use_filters = args.filters
-    use_oversampling = args.oversample
+    if args.oversample:
+        use_oversampling = 1
+    else:
+        use_oversampling = 0
     if args.random:
         randargs = [(args.random[0], args.random[1])]
     else:
@@ -374,9 +378,6 @@ if __name__ == "__main__":
     if args.blacklist:
         blacklist.create_blacklist("data")
 
-    if use_oversampling:  # Turns the used classifiers into their oversampling equivalents
-        clfnames = ['os_' + s for s in clfnames]
-
     if args.results:  # Instead of executing other functions show previous results
         res.showresults(args.results, "results/results.json", showplots=True)
     elif args.calc:
@@ -392,4 +393,4 @@ if __name__ == "__main__":
             pass  # No Selection method was given so just return
         else:
             makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug,
-                    args.keepfl, dim_reduction_methods, set_fl)
+                    args.keepfl, dim_reduction_methods, set_fl, use_oversampling=use_oversampling)
