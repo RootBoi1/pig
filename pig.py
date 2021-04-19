@@ -110,7 +110,7 @@ def makefolds(p, n, n_folds, randseed):
 # Random Parameter Search
 #############
 
-def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling=0):
+def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling=False):
     """
     Creates and dumps tasks, dataframe and the folds created by kfold
     that are then read and executed by the cluster.
@@ -254,7 +254,7 @@ def getresults():
 
 
 def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug, keep_featurelists,
-            dr, set_fl=[], use_oversampling=True):
+            dr, set_fl=[], use_oversampling=False):
     """
     Note: keep_featurelists is no longer working after code has been restructured - TODO.
     """
@@ -350,10 +350,7 @@ if __name__ == "__main__":
     debug = args.debug
     use_rnaz = args.rnaz
     use_filters = args.filters
-    if args.oversample:
-        use_oversampling = 1
-    else:
-        use_oversampling = 0
+    use_oversampling = args.oversample
     if args.random:
         randargs = [(args.random[0], args.random[1])]
     else:

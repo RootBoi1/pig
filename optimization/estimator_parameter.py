@@ -60,8 +60,8 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
         best_esti_score = -1
         best_esti = clf
     if os:
-        os = RandomOverSampler(random_state=randseed)
-        X_train, y_train = os.fit_resample(X_train, y_train)
+       os = RandomOverSampler(random_state=randseed)
+       X_train, y_train = os.fit_resample(X_train, y_train)
     clf.fit(X_train, y_train)
     ######
     try:
