@@ -189,10 +189,15 @@ def bmm(ali):
                 return {"big_mysterious_hairpin": 0} # Cannot be BMM
     #print(ali.structure)
     percentage = (stem_counter*2)/counter
+    loop_size = counter - (stem_counter*2)
     if percentage >= 0.7:
-        return {"big_mysterious_hairpin": 1} # BMM found
+        return {"big_mysterious_hairpin": 1,
+                "big_mysterious_hairpin_percent": percentage,
+                "loop_size": loop_size}  # BMM found 
     else:
-        return {"big_mysterious_hairpin": 0} # Hairpin to small
+        return {"big_mysterious_hairpin": 0,
+                "big_mysterious_hairpin_percent": percentage,
+                "loop_size": loop_size}  # Hairpin to small
              
 
 

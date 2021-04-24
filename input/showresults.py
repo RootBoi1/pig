@@ -15,6 +15,7 @@ def showresults(args, resultfile="results/results.json", showplots=True):
     results = b.loadfile(resultfile)
     estimators = defaultdict(lambda: defaultdict(list))
     plt.rcParams.update({'font.size': 22})
+    bad_params = ["criterion", "verbose", "warm_start", "min_weight_fraction_leaf", "subsample", "ccp_alpha"]
     ftlists = []
     c = Counter()
     y_true = []
@@ -45,7 +46,8 @@ def showresults(args, resultfile="results/results.json", showplots=True):
             print(f"{key}:")
             print("-" * (len(key)+1))
             for param in estimators[key].items():
-                print(f"{param[0]}: {param[1]}")
+                if param[0] not in bad_params:
+                    print(f"{param[0]}: {param[1]}")
             for tpr, tnr, precision in estimators[key]["accuracy_score"]: # ROUNDED accuracies
                 avg_tpr += tpr # Recall
                 avg_tnr += tnr

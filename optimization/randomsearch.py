@@ -73,9 +73,9 @@ xtratrees_params = {'bootstrap': [False,True], # xtra trees
      'warm_start': [False]}
 gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
      'init': [None],
-     'learning_rate': [0.1, 0.2, 0.05, 0.3],
+     'learning_rate': [0.1,0.2,0.3],
      'loss': ['deviance','exponential'],
-     'max_depth': [5,7,10,13,16],
+     'max_depth': [2,3,4,5,7],
      'max_features': ['sqrt','log2', None],
      'max_leaf_nodes': [None],
      'min_impurity_decrease': [0.0],
@@ -83,7 +83,7 @@ gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
      'min_samples_leaf': [1],
      'min_samples_split': [2, 3, 4],
      'min_weight_fraction_leaf': [0.0],
-     'n_estimators':  list(range(50, 400)),
+     'n_estimators':  [x for x in range(75, 401, 25)],
      'n_iter_no_change': [None],
      'random_state': [None],
      'subsample': [1.0],
@@ -93,10 +93,10 @@ gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
      'warm_start': [False]}
 randomforest_params = {
         'random_state': [None],
-        'class_weight': ['balanced', None],
-        'max_depth': list(range(5,20)),
-        'n_estimators': list(range(50,400)),
-        'min_samples_split': [2, 3, 4],
+        'class_weight': ['balanced'],
+        'max_depth': [10,11,12,13,14,15],
+        'n_estimators': [x for x in range(75,401,25)],
+        'min_samples_split': [2,3,4,5],
         'criterion': ["gini"],
         'min_samples_leaf': [1],
         'min_weight_fraction_leaf': [0.0],

@@ -12,7 +12,7 @@ def score(X, y, clf_param, n_jobs, debug, randseed):
     clf, param = clf_param
     searcher = RSCV(clf, 
                 param, 
-                n_iter=10 if not debug else 5, 
+                n_iter=50 if not debug else 5, 
                 scoring="f1",
                 n_jobs=n_jobs,
                 #iid=False,
@@ -60,7 +60,7 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
         best_esti_score = -1
         best_esti = clf
     if os:
-       os = RandomOverSampler(random_state=randseed)
+       os = RandomOverSampler(random_state=randseed, shrinkage=0.00001)
        X_train, y_train = os.fit_resample(X_train, y_train)
     clf.fit(X_train, y_train)
     ######

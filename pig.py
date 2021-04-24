@@ -25,7 +25,7 @@ def cleanup(keep_pn=True, keep_featurelists=False):
         if os.path.exists(f"/scratch/bi01/guest02/pig/logs/{folder}"):
             for file in os.listdir(f"/scratch/bi01/guest02/pig/logs/{folder}"):
                 os.remove(f"/scratch/bi01/guest02/pig/logs/{folder}/{file}")
-            print(f"Cleaned up {folder}")
+            # print(f"Cleaned up {folder}")
     if os.path.exists(f"{tmpdirectory}"):
         ##        if keep_featurelists:
         ##            print("Kept featurelists from previous run")
@@ -39,7 +39,7 @@ def cleanup(keep_pn=True, keep_featurelists=False):
                 if not (keep_featurelists and (
                         file.startswith("fs_") or file.startswith("folds") or file.startswith("dataframe"))):
                     os.remove(f"{tmpdirectory}/{file}")
-                    print(f"Removed {tmpdirectory}/{file}")
+                    # print(f"Removed {tmpdirectory}/{file}")
 
 
 def create_directories():
@@ -282,7 +282,7 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
     getresults()
     # Write results in a readable file and save ROC and precision recall graphs
     b.shexec(f"python pig.py --results fel > results/output_results.txt")
-    res.showresults("rp", "results/results.json", showplots=False)
+    res.showresults("rpe", "results/results.json", showplots=False)
     print(f"{time() - starttime}: Done")
 
 #############
@@ -366,7 +366,7 @@ if __name__ == "__main__":
     n_folds = args.nfolds
     randseed = args.seed
     numneg = args.numneg  # Number of negative files beeing read by b.loaddata()
-    n_jobs = 1  # Number of parallel jobs used by RandomizedSearchCV
+    n_jobs = 4  # Number of parallel jobs used by RandomizedSearchCV
     if args.featurelist:
         set_fl = args.featurelist[0].strip("'[]").split("', '")
     else:
