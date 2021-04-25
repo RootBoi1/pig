@@ -191,8 +191,8 @@ def bmm(ali):
     percentage = (stem_counter*2)/counter
     loop_size = counter - (stem_counter*2)
     if percentage >= 0.7:
-        return {"big_mysterious_hairpin": 1,
-                "big_mysterious_hairpin_percent": percentage,
+        return {"big_mysterious_hairpin_percent": percentage,
+                "big_mysterious_hairpin": 1,
                 "loop_size": loop_size}  # BMM found 
     else:
         return {"big_mysterious_hairpin": 0,
