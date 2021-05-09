@@ -9,30 +9,26 @@ import numpy as np
 class EncoderFC(torch.nn.Module):
     def __init__(self, input_dim, hidden, latent_dim):
         super(EncoderFC, self).__init__()
-        self.linear1 = torch.nn.Linear(input_dim, hidden)
-        self.linear2 = torch.nn.Linear(hidden, hidden)
-        self.linear3 = torch.nn.Linear(hidden, hidden)
+        self.linear1 = torch.nn.Linear(input_dim, int((hidden+input_dim)/2))
+        self.linear2 = torch.nn.Linear(int((input_dim+hidden)/2), hidden)
         self.linear41 = torch.nn.Linear(hidden, latent_dim)
         self.linear42 = torch.nn.Linear(hidden, latent_dim)
   
     def forward(self, x): 
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
         return self.linear41(x), F.softplus(-self.linear42(x))
 
 class DecoderFC(torch.nn.Module):
     def __init__(self, latent_dim, hidden, input_dim):
         super(DecoderFC, self).__init__()
         self.linear1 = torch.nn.Linear(latent_dim, hidden)
-        self.linear2 = torch.nn.Linear(hidden, hidden)
-        self.linear3 = torch.nn.Linear(hidden, hidden)
-        self.linear4 = torch.nn.Linear(hidden, input_dim)
+        self.linear2 = torch.nn.Linear(hidden, int((input_dim+hidden)/2))
+        self.linear4 = torch.nn.Linear(int((input_dim+hidden)/2), input_dim)
 
     def forward(self, x):
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
         return torch.sigmoid(self.linear4(x))
 
 class VAE(torch.nn.Module):
@@ -41,7 +37,7 @@ class VAE(torch.nn.Module):
         self.latent_dim = latent_dim 
         self.encoder = EncoderFC(input_size, first_layer_size, self.latent_dim)
         self.decoder = DecoderFC(self.latent_dim, first_layer_size, input_size)
-        self.device = 'cpu' # cuda if you have a nvidia gpu
+        self.device = 'cpu'
         self.to(self.device)
         self.optimizer = optim.Adam(self.parameters(), lr=1e-03)
        
@@ -75,7 +71,7 @@ class VAE(torch.nn.Module):
 
     def lossfunction(self, data, pred, beta, mu, logvar):
         # Reconstruction loss
-        rec = F.binary_cross_entropy(pred, data, reduction='mean')
+        rec = F.mse_loss(pred, data, reduction='mean')
         # KLD to unit gaussian
         kld = (-beta * (1 + logvar - mu.pow(2) - logvar.exp())).sum(1).mean(0,True)
         return rec + kld
@@ -86,18 +82,10 @@ class VAE(torch.nn.Module):
             losses = []
             # Iterate through dataset (1 time through all batches in the dataset)
             for i, data in enumerate(dataset, 0):
-                # Get a batch of images from the data and put it on the GPU (if used)
+                # Get a batch from the data and put it on the CPU
                 img = data.to(self.device).float()
-                # Forward pass the input image img through the VAE
+                # Forward pass the input through the VAE
                 pred, z, mu, logvar = self(img)
-                # Accumulate latentspace
-                if e == epochs -1:
-                    if i == 0:
-                        z_full = z
-                    else:
-                        z_full = torch.cat((z_full, z), 0)
-                    if i == len(dataset) - 1:
-                        return z_full
                 loss = self.lossfunction(img, pred, beta, mu, logvar)
                 # Step the optimizer
                 self.optimizer.zero_grad()
@@ -106,6 +94,21 @@ class VAE(torch.nn.Module):
                 # housekeeping
                 losses.append(loss.item())
             print("Epoch {}/{} done, loss: {}!".format(e+1, epochs, np.mean(losses)))
+
+
+    def predict(self, dataset):
+        for i, data in enumerate(dataset, 0):
+            # Get a batch from the data and put it on the CPU
+            img = data.to(self.device).float()
+            # Forward pass the input through the VAE
+            pred, z, mu, logvar = self(img)
+            # Accumulate latentspace
+            if i == 0:
+                z_full = z
+            else:
+                z_full = torch.cat((z_full, z), 0)
+            if i == len(dataset) - 1:
+                return z_full
 
 
 # Hyperparameter

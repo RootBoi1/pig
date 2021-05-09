@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.base import clone
 from sklearn.metrics import f1_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
+from sklearn.model_selection import GridSearchCV as GSCV
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import RandomOverSampler
 import optimization.randomsearch as rs
@@ -28,6 +29,23 @@ def score(X, y, clf_param, n_jobs, debug, randseed):
     best_esti = searcher.best_estimator_
     return best_esti_score, best_esti
 
+def score2(X, y, clf_param, n_jobs, debug, randseed):
+    clf, param = clf_param
+    searcher = GSCV(clf, 
+                param, 
+                scoring="f1",
+                n_jobs=n_jobs,
+                #iid=False,
+                #fefit=True,
+                cv=5,
+                verbose=0,
+                pre_dispatch="2*n_jobs",
+                error_score=np.nan,
+                return_train_score=False)
+    searcher.fit(X, y)
+    best_esti_score = searcher.best_score_
+    best_esti = searcher.best_estimator_
+    return best_esti_score, best_esti
 
 def execute_classifier_string(clfname):
     """
@@ -53,14 +71,14 @@ def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug, mode
     if len(clfname) < 20:
         clf_param = rs.classifiers[clfname]
         clf_param[1]["random_state"] = [randseed]
-        best_esti_score, best_esti = score(X_train, y_train, clf_param, n_jobs, debug, randseed)
+        best_esti_score, best_esti = score2(X_train, y_train, clf_param, n_jobs, debug, randseed)
         clf = clone(best_esti)
     else:
         clf = execute_classifier_string(clfname)
         best_esti_score = -1
         best_esti = clf
     if os:
-       os = RandomOverSampler(random_state=randseed, shrinkage=0.00001)
+       os = RandomOverSampler(random_state=randseed)
        X_train, y_train = os.fit_resample(X_train, y_train)
     clf.fit(X_train, y_train)
     ######

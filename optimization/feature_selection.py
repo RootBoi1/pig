@@ -25,10 +25,11 @@ def svcl2(X_data, y_data, df, args):
     """
     Linear Support Vector Classification with L2 Regularization.
     """
-    randseed, C = args
-    clf = LinearSVC(penalty="l2", random_state=randseed, C=C)
+    randseed, max_features = args
+    clf = LinearSVC(penalty="l2", random_state=randseed)
     clf.fit(X_data, y_data)
-    sel = SelectFromModel(clf, prefit=True)
+    max_features = int(max_features)
+    sel = SelectFromModel(clf, prefit=True, threshold=-np.inf, max_features=max_features)
     support = sel.get_support(True)
     return [b for a, b in zip(clf.coef_[0][support],  df.columns[support])]
 
@@ -97,13 +98,13 @@ def agglomerative_clustering(X_data, y_data, df, args):
         indices = [x for x, y in enumerate(labels) if y==i]
         dataframe = pd.DataFrame(X_data).transpose().iloc[:, indices]
         dataframe.insert(0, "labels", y_data, allow_duplicates=True)
-        corr_matrix = dataframe.corr("pearson").abs().iloc[:,[0]]
+        corr_matrix = dataframe.corr("spearman").abs().iloc[:,[0]]
         best_feature_index = np.argmax(corr_matrix.values[1:])
-        # fl.append(list(df.columns)[indices[best_feature_index]])
-        dataf = pd.DataFrame(X_data).transpose().iloc[:, indices]
-        vt = VarianceThreshold()
-        vt.fit(dataf)
-        fl.append(list(df.columns)[indices[list(vt.variances_).index(max(vt.variances_))]])
+        fl.append(list(df.columns)[indices[best_feature_index]])
+        #dataf = pd.DataFrame(X_data).transpose().iloc[:, indices]
+        #vt = VarianceThreshold()
+        #vt.fit(dataf)
+        #fl.append(list(df.columns)[indices[list(vt.variances_).index(max(vt.variances_))]])
     return fl
 
 

@@ -58,17 +58,20 @@ def create_directories():
 #############
 
 
-def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
+def kfold(X, y, n_splits=2, randseed=None, shuffle=True, seedlist=[None]):
     """Applies KFold Cross Validation to the given data.
     Returns:
       splits (List): A list where each entry represents each fold with [X_train, X_test, y_train, y_test]
     """
     from sklearn.model_selection import StratifiedKFold
     splits = []
-    kf = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=randseed)
-    for train, test in kf.split(X, y):
-        splits.append([X[train], X[test],
-                       [y[i] for i in train], [y[i] for i in test]])
+    for i in seedlist:
+        if not i:
+            i = randseed 
+        kf = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=i)
+        for train, test in kf.split(X, y):
+            splits.append([X[train], X[test],
+                           [y[i] for i in train], [y[i] for i in test]])
     return splits
 
 
@@ -92,12 +95,12 @@ def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
     return p, n
 
 
-def makefolds(p, n, n_folds, randseed):
+def makefolds(p, n, n_folds, randseed, seedlist=[None]):
     allfeatures = list(p[1].keys())
     allfeatures.remove("name")  # We dont need the filenames (for now)
     X, Y, df = b.makeXY(allfeatures, p, n)
     X = StandardScaler().fit_transform(X)
-    folds = kfold(X, Y, n_splits=n_folds, randseed=randseed)
+    folds = kfold(X, Y, n_splits=n_folds, randseed=randseed, seedlist=seedlist)
     return folds, df
 
 
@@ -110,7 +113,7 @@ def makefolds(p, n, n_folds, randseed):
 # Random Parameter Search
 #############
 
-def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling=False):
+def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling=False, seedlist=[None]):
     """
     Creates and dumps tasks, dataframe and the folds created by kfold
     that are then read and executed by the cluster.
@@ -134,8 +137,8 @@ def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr
     
     """
     tasks = []
-    folds, df = makefolds(p, n, n_folds, randseed)  # numfolds = n_splits
-    for foldnr in range(n_folds):
+    folds, df = makefolds(p, n, n_folds, randseed, seedlist)  # numfolds = n_splits
+    for foldnr in range(len(folds)):
         for clfname in clfnames:
             for fstype, parameters in fs_selection_methods.items():
                 for args in parameters:
@@ -221,6 +224,7 @@ def calculate(idd, n_jobs, debug):
         fname = "Set Featurelist"
     else:
         raise ValueError("Incorrect number of arguments in the taskfile: {len(task)} should be 5 or 3")
+    print(len(ftlist))
     if dim_r[1]:
         foldxy, model = dim_reduction.dimension_reduction(foldxy, mask, dim_r, randseed)
         scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
@@ -254,7 +258,7 @@ def getresults():
 
 
 def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug, keep_featurelists,
-            dr, set_fl=[], use_oversampling=False):
+            dr, set_fl=[], use_oversampling=False, seedlist=[None]):
     """
     Note: keep_featurelists is no longer working after code has been restructured - TODO.
     """
@@ -269,7 +273,7 @@ def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numn
         tasklen = make_set_fl_tasks(p, n, set_fl, clfnames, n_folds, randseed)
         print("Skip feature selection using set featurelist")
     else:
-        tasklen = maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling)
+        tasklen = maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug, dr, use_oversampling, seedlist=seedlist)
     if tasklen == 0:
         print("No tasks were created. Possibly used wrong parameters.")
         return
@@ -339,6 +343,7 @@ if __name__ == "__main__":
     parser.add_argument('--numneg', type=int, default=10000,
                         help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
+    parser.add_argument('--seedlist', nargs='+', type=int, default=[42], help='Random Seed used for execution')
     parser.add_argument('--results', type=str, default="",
                         help='If used ignore all other arguments and show selected results (options: hfelrp)')
     parser.add_argument('--keepfl', action='store_true',
@@ -390,4 +395,4 @@ if __name__ == "__main__":
             pass  # No Selection method was given so just return
         else:
             makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug,
-                    args.keepfl, dim_reduction_methods, set_fl, use_oversampling=use_oversampling)
+                    args.keepfl, dim_reduction_methods, set_fl, use_oversampling=use_oversampling, seedlist=args.seedlist)
