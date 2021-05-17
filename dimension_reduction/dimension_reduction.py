@@ -37,7 +37,7 @@ def dimension_reduction(foldxy, mask, dr, seed):
                 PCA(n_components=num_features, random_state=seed))
     elif dtype == "umap":
         model = make_pipeline(StandardScaler(),
-                umap.UMAP(n_components=num_features, n_neighbors=200, n_epochs=500, random_state=seed))
+                umap.UMAP(n_components=num_features, random_state=seed))
     elif dtype == "lda":
         model = LinearDiscriminantAnalysis(n_components=num_features)
     elif dtype == "nca":

@@ -224,7 +224,6 @@ def calculate(idd, n_jobs, debug):
         fname = "Set Featurelist"
     else:
         raise ValueError("Incorrect number of arguments in the taskfile: {len(task)} should be 5 or 3")
-    print(len(ftlist))
     if dim_r[1]:
         foldxy, model = dim_reduction.dimension_reduction(foldxy, mask, dim_r, randseed)
         scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed,
