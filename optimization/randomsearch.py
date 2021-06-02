@@ -1,6 +1,7 @@
 # define parameters for the random search 
 
 import pprint
+from sklearn.linear_model import SGDClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -111,6 +112,11 @@ randomforest_params = {
         'warm_start': [False],
         'ccp_alpha': [0.0],
         'max_samples': [None]}
+SGD_params = {
+        'random_state': [None],
+        'penalty': ["l1", "l2", "elasticnet"],
+        'alpha': [0.0001, 0.001,0.00001,0.01],
+        'class_weight': ['balanced']}
 
 
 
@@ -121,7 +127,8 @@ classifiers = { # {clfname: (Classifier, {parameters}), ...}
     'randomforest': (RandomForestClassifier(random_state=42), randomforest_params),
     'os_neuralnet': (OS_MLPClassifier(), neuralnet_params),
     'os_xtratrees': (OS_ExtraTreesClassifier(), xtratrees_params),
-    'os_gradientboosting': (OS_GradientBoostingClassifier(), gradientboosting_params)
+    'os_gradientboosting': (OS_GradientBoostingClassifier(), gradientboosting_params),
+    'sgd': (SGDClassifier(), SGD_params)
     }
 
 

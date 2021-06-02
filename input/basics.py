@@ -69,9 +69,10 @@ def makeXY(featurelist, p, n):
     asd = [clean(e, featurelist) for e in copy.deepcopy(p+n)]
     df = pd.DataFrame(asd)
     df = df.transpose().drop_duplicates().transpose() # Remove Duplicates
+    names = df.pop("name")
     X = df.to_numpy()
     y = [1]*len(p)+[0]*len(n)
-    return X, y, df
+    return X, y, names.to_numpy(), df
 
 
 ##################

@@ -58,13 +58,14 @@ def create_directories():
 #############
 
 
-def kfold(X, y, n_splits=2, randseed=None, shuffle=True, seedlist=[None]):
+def kfold(X, y, names, n_splits=2, randseed=None, shuffle=True, seedlist=[None]):
     """Applies KFold Cross Validation to the given data.
     Returns:
       splits (List): A list where each entry represents each fold with [X_train, X_test, y_train, y_test]
     """
     from sklearn.model_selection import StratifiedKFold
     splits = []
+    ft_names = []
     for i in seedlist:
         if not i:
             i = randseed 
@@ -72,7 +73,9 @@ def kfold(X, y, n_splits=2, randseed=None, shuffle=True, seedlist=[None]):
         for train, test in kf.split(X, y):
             splits.append([X[train], X[test],
                            [y[i] for i in train], [y[i] for i in test]])
-    return splits
+            ft_names.append([names[train], names[test]])
+    np.array(ft_names, dtype=object).dump(f"{tmpdirectory}/ft_names.pkl")
+    return splits 
 
 
 #############
@@ -97,10 +100,10 @@ def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
 
 def makefolds(p, n, n_folds, randseed, seedlist=[None]):
     allfeatures = list(p[1].keys())
-    allfeatures.remove("name")  # We dont need the filenames (for now)
-    X, Y, df = b.makeXY(allfeatures, p, n)
+    # allfeatures.remove("name")  # We dont need the filenames (for now)
+    X, Y, names, df = b.makeXY(allfeatures, p, n)
     X = StandardScaler().fit_transform(X)
-    folds = kfold(X, Y, n_splits=n_folds, randseed=randseed, seedlist=seedlist)
+    folds = kfold(X, Y, names, n_splits=n_folds, randseed=randseed, seedlist=seedlist)
     return folds, df
 
 
